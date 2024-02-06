@@ -1,6 +1,6 @@
 # Cw20-Staking
 
-Uniswap-inspired automated market-maker (AMM) protocol powered by Smart Contracts on the [Orai](https://orai.io) blockchain.
+This contract for staking cw20 tokens to get rewards.
 
 ## Contracts
 
