@@ -1,4 +1,4 @@
-# OraiSwap
+# Cw20-Staking
 
 Uniswap-inspired automated market-maker (AMM) protocol powered by Smart Contracts on the [Orai](https://orai.io) blockchain.
 
@@ -68,8 +68,7 @@ rustup target add wasm32-unknown-unknown
 You can run unit tests on this on each contracts directory via :
 
 ```bash
-cargo unit-test
-cargo integration-test
+cargo test
 ```
 
 ## Gen proto definitions
