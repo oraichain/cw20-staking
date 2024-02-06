@@ -96,19 +96,12 @@ pub fn receive_cw20(
     cw20_msg: Cw20ReceiveMsg,
 ) -> StdResult<Response> {
     match from_binary(&cw20_msg.msg) {
-        Ok(Cw20HookMsg::Bond {}) => {
-            // check permission
-            let token_raw = deps.api.addr_canonicalize(info.sender.as_str())?;
-
-            let pool_info = read_pool_info(deps.storage, &token_raw)?;
-
-            bond(
-                deps,
-                Addr::unchecked(cw20_msg.sender),
-                info.sender,
-                cw20_msg.amount,
-            )
-        }
+        Ok(Cw20HookMsg::Bond {}) => bond(
+            deps,
+            Addr::unchecked(cw20_msg.sender),
+            info.sender,
+            cw20_msg.amount,
+        ),
         Err(_) => Err(StdError::generic_err("invalid cw20 hook message")),
     }
 }
@@ -369,6 +362,6 @@ pub fn query_get_pools_infomation(deps: Deps) -> StdResult<Vec<QueryPoolInfoResp
 
 // migrate contract
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
     Ok(Response::default())
 }
