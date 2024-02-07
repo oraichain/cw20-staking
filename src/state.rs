@@ -176,8 +176,9 @@ pub fn remove_and_accumulate_lock_info(
     let mut bucket = Bucket::<Uint128>::multilevel(storage, &[LOCK_INFO, asset_key, user]);
     let mut remove_timestamps = vec![];
     let mut accumulate_amount = Uint128::zero();
-    for item in bucket.range(None, None, Order::Ascending) {
-        let (time, amount) = item?;
+    let mut cusor = bucket.range(None, None, Order::Ascending);
+    while let Some(Ok((time, amount))) = cusor.next() {
+        // let (time, amount) = item?;
         let seconds = u64::from_be_bytes(
             <[u8; 8]>::try_from(time.clone())
                 .map_err(|_| StdError::generic_err("Casting vec to be_bytes fail"))?,
@@ -188,6 +189,7 @@ pub fn remove_and_accumulate_lock_info(
         remove_timestamps.push(time);
         accumulate_amount += amount;
     }
+    drop(cusor);
 
     // remove timestamp
     for time in remove_timestamps {
