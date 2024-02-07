@@ -151,6 +151,7 @@ pub fn read_user_lock_info(
         Order::Ascending => (calc_range_start(start_after), None),
         Order::Descending => (None, start_after),
     };
+
     ReadonlyBucket::multilevel(storage, &[LOCK_INFO, asset_key, user])
         .range(start.as_deref(), end.as_deref(), order_by)
         .take(limit)
@@ -158,7 +159,7 @@ pub fn read_user_lock_info(
             let (time, amount) = item?;
             Ok(LockInfo {
                 unlock_time: Timestamp::from_seconds(u64::from_be_bytes(
-                    <[u8; 8]>::try_from(time)
+                    time.try_into()
                         .map_err(|_| StdError::generic_err("Casting u64 to timestamp fail"))?,
                 )),
                 amount,
