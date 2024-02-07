@@ -1,8 +1,8 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 
-use crate::asset::{Asset, AssetInfo};
 use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128};
 use cw20::Cw20ReceiveMsg;
+use oraiswap::asset::{Asset, AssetInfo};
 
 #[cw_serde]
 pub struct InstantiateMsg {

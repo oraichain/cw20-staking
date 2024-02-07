@@ -1218,22 +1218,6 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 [[package]]
 name = "oraiswap"
 version = "0.2.0"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-multi-test",
- "cw20",
- "cw20-base",
- "protobuf",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "oraiswap"
-version = "0.2.0"
 source = "git+https://github.com/oraichain/oraiswap?branch=main#b263e2170f40c8b6d97fbb75f6ebc138b42b6284"
 dependencies = [
  "cosmwasm-schema",
@@ -1257,7 +1241,7 @@ dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-storage-plus",
- "oraiswap 0.2.0 (git+https://github.com/oraichain/oraiswap?branch=main)",
+ "oraiswap",
 ]
 
 [[package]]
@@ -1268,7 +1252,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus",
- "oraiswap 0.2.0 (git+https://github.com/oraichain/oraiswap?branch=main)",
+ "oraiswap",
  "thiserror",
 ]
 
@@ -1284,7 +1268,7 @@ dependencies = [
  "cw20",
  "cw20-base",
  "integer-sqrt",
- "oraiswap 0.2.0 (git+https://github.com/oraichain/oraiswap?branch=main)",
+ "oraiswap",
  "thiserror",
 ]
 
@@ -1297,12 +1281,17 @@ dependencies = [
  "cosmwasm-storage",
  "cosmwasm-testing-util",
  "cosmwasm-vm",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
  "cw20",
- "oraiswap 0.2.0",
+ "cw20-base",
+ "oraiswap",
  "oraiswap-factory",
  "oraiswap-oracle",
  "oraiswap-pair",
  "oraiswap-token",
+ "thiserror",
 ]
 
 [[package]]
@@ -1314,7 +1303,7 @@ dependencies = [
  "cosmwasm-std",
  "cw20",
  "cw20-base",
- "oraiswap 0.2.0 (git+https://github.com/oraichain/oraiswap?branch=main)",
+ "oraiswap",
  "thiserror",
 ]
 

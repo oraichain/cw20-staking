@@ -1,5 +1,6 @@
+use crate::msg::LockInfo;
 use cosmwasm_schema::cw_serde;
-use oraiswap::{asset::AssetRaw, querier::calc_range_start, staking::LockInfo};
+use oraiswap::{asset::AssetRaw, querier::calc_range_start};
 
 use cosmwasm_std::{
     CanonicalAddr, Decimal, Order, StdError, StdResult, Storage, Timestamp, Uint128,

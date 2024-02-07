@@ -1,5 +1,6 @@
 use std::convert::TryFrom;
 
+use crate::msg::{RewardInfoResponse, RewardInfoResponseItem, RewardMsg};
 use crate::state::{
     read_config, read_pool_info, read_rewards_per_sec, rewards_read, rewards_store, stakers_read,
     store_pool_info, PoolInfo, RewardInfo, DEFAULT_LIMIT, MAX_LIMIT,
@@ -10,7 +11,6 @@ use cosmwasm_std::{
 };
 use oraiswap::asset::{Asset, AssetRaw};
 use oraiswap::querier::calc_range_start;
-use oraiswap::staking::{RewardInfoResponse, RewardInfoResponseItem, RewardMsg};
 
 // deposit_reward must be from reward token contract
 pub fn deposit_reward(

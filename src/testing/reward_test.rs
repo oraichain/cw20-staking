@@ -1,14 +1,14 @@
 use crate::contract::{execute, instantiate, query};
+use crate::msg::{
+    Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolInfoResponse, QueryMsg, RewardInfoResponse,
+    RewardInfoResponseItem, RewardMsg,
+};
 use crate::state::{read_pool_info, rewards_read, store_pool_info, PoolInfo, RewardInfo};
 use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
 use cosmwasm_std::{coin, from_binary, to_binary, Addr, Api, Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
 use oraiswap::asset::{Asset, AssetInfo, ORAI_DENOM};
 use oraiswap::create_entry_points_testing;
-use oraiswap::staking::{
-    Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolInfoResponse, QueryMsg, RewardInfoResponse,
-    RewardInfoResponseItem, RewardMsg,
-};
 use oraiswap::testing::{MockApp, ATOM_DENOM};
 
 #[test]

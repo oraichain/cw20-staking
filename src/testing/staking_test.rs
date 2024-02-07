@@ -1,4 +1,8 @@
 use crate::contract::{execute, instantiate, query, query_get_pools_infomation};
+use crate::msg::{
+    Cw20HookMsg, ExecuteMsg, InstantiateMsg, LockInfosResponse, PoolInfoResponse, QueryMsg,
+    RewardInfoResponse, RewardInfoResponseItem, RewardMsg,
+};
 use crate::state::{store_pool_info, PoolInfo, MAX_LIMIT};
 use cosmwasm_std::testing::{
     mock_dependencies, mock_dependencies_with_balance, mock_env, mock_info, MockApi, MockQuerier,
@@ -12,10 +16,6 @@ use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use oraiswap::asset::{Asset, AssetInfo, ORAI_DENOM};
 use oraiswap::create_entry_points_testing;
 use oraiswap::pair::PairResponse;
-use oraiswap::staking::{
-    Cw20HookMsg, ExecuteMsg, InstantiateMsg, LockInfosResponse, PoolInfoResponse, QueryMsg,
-    RewardInfoResponse, RewardInfoResponseItem, RewardMsg,
-};
 use oraiswap::testing::{AttributeUtil, MockApp, ATOM_DENOM};
 
 #[test]

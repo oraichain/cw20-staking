@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use oraiswap::staking::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use oraiswap_staking::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 fn main() {
     write_api! {

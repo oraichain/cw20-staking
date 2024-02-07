@@ -1,3 +1,4 @@
+use crate::msg::{ExecuteMsg, LockInfo};
 use crate::rewards::before_share_change;
 use crate::state::{
     insert_lock_info, read_config, read_pool_info, read_unbonding_period,
@@ -12,7 +13,6 @@ use cw20::Cw20ExecuteMsg;
 use oraiswap::asset::{Asset, AssetInfo, PairInfo};
 use oraiswap::pair::ExecuteMsg as PairExecuteMsg;
 use oraiswap::querier::{query_pair_info, query_token_balance};
-use oraiswap::staking::{ExecuteMsg, LockInfo};
 
 pub fn bond(
     deps: DepsMut,
