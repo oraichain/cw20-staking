@@ -177,16 +177,19 @@ pub fn remove_and_accumulate_lock_info(
     let mut bucket = Bucket::<Uint128>::multilevel(storage, &[LOCK_INFO, asset_key, user]);
     let mut remove_timestamps = vec![];
     let mut accumulate_amount = Uint128::zero();
-    let mut cursor = bucket.range(None, None, Order::Ascending);
-    let time_in_seconds = timestamp.seconds().to_be_bytes().to_vec();
-    while let Some(Ok((time, amount))) = cursor.next() {
-        if time.cmp(&time_in_seconds) == std::cmp::Ordering::Greater {
-            break;
+
+    // use temporay cursor
+    {
+        let mut cursor = bucket.range(None, None, Order::Ascending);
+        let time_in_seconds = timestamp.seconds().to_be_bytes().to_vec();
+        while let Some(Ok((time, amount))) = cursor.next() {
+            if time.cmp(&time_in_seconds) == std::cmp::Ordering::Greater {
+                break;
+            }
+            remove_timestamps.push(time);
+            accumulate_amount += amount;
         }
-        remove_timestamps.push(time);
-        accumulate_amount += amount;
     }
-    drop(cursor);
 
     // remove timestamp
     for time in remove_timestamps {
