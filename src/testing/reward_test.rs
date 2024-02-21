@@ -22,10 +22,6 @@ fn test_deposit_reward() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("rewarder"),
-        minter: Some(Addr::unchecked("mint")),
-        oracle_addr: Addr::unchecked("oracle"),
-        factory_addr: Addr::unchecked("factory"),
-        base_denom: None,
     };
 
     let info = mock_info("addr", &[]);
@@ -153,10 +149,6 @@ fn test_deposit_reward_when_no_bonding() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("rewarder"),
-        minter: Some(Addr::unchecked("mint")),
-        oracle_addr: Addr::unchecked("oracle"),
-        factory_addr: Addr::unchecked("factory"),
-        base_denom: None,
     };
 
     let info = mock_info("addr", &[]);
@@ -272,10 +264,6 @@ fn test_before_share_changes() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("rewarder"),
-        minter: Some(Addr::unchecked("mint")),
-        oracle_addr: Addr::unchecked("oracle"),
-        factory_addr: Addr::unchecked("factory"),
-        base_denom: None,
     };
 
     let info = mock_info("addr", &[]);
@@ -443,10 +431,6 @@ fn test_withdraw() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: reward_addr.clone(),
-        minter: Some(Addr::unchecked("mint")),
-        oracle_addr: app.oracle_addr.clone(),
-        factory_addr: app.factory_addr.clone(),
-        base_denom: None,
     };
 
     let code_id = app.upload(Box::new(create_entry_points_testing!(crate)));
@@ -592,10 +576,6 @@ fn test_update_rewards_per_sec() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("rewarder"),
-        minter: Some(Addr::unchecked("mint")),
-        oracle_addr: Addr::unchecked("oracle"),
-        factory_addr: Addr::unchecked("factory"),
-        base_denom: None,
     };
     let staking_token = Addr::unchecked("staking_token");
 
@@ -737,10 +717,6 @@ fn test_update_rewards_per_sec_with_multiple_bond() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("rewarder"),
-        minter: Some(Addr::unchecked("mint")),
-        oracle_addr: Addr::unchecked("oracle"),
-        factory_addr: Addr::unchecked("factory"),
-        base_denom: None,
     };
 
     let info = mock_info("addr", &[]);

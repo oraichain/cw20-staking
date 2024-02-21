@@ -23,9 +23,6 @@ pub const MAX_LIMIT: u32 = 30;
 pub struct Config {
     pub owner: CanonicalAddr,
     pub rewarder: CanonicalAddr,
-    pub oracle_addr: CanonicalAddr,
-    pub factory_addr: CanonicalAddr,
-    pub base_denom: String,
 }
 
 pub fn store_config(storage: &mut dyn Storage, config: &Config) -> StdResult<()> {
