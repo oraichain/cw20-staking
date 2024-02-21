@@ -5,7 +5,7 @@ use crate::rewards::{
     deposit_reward, process_reward_assets, query_all_reward_infos, query_reward_info,
     withdraw_reward, withdraw_reward_others,
 };
-use crate::staking::{auto_stake, auto_stake_hook, bond, unbond};
+use crate::staking::{bond, unbond};
 use crate::state::{
     read_all_pool_infos, read_config, read_pool_info, read_rewards_per_sec, read_user_lock_info,
     stakers_read, store_config, store_pool_info, store_rewards_per_sec, store_unbonding_period,
@@ -20,7 +20,7 @@ use cosmwasm_std::{
     from_binary, to_binary, Addr, Api, Binary, CanonicalAddr, Decimal, Deps, DepsMut, Env,
     MessageInfo, Order, Response, StdError, StdResult, Uint128,
 };
-use oraiswap::asset::{Asset, AssetRaw, ORAI_DENOM};
+use oraiswap::asset::{Asset, AssetRaw};
 
 use cw20::Cw20ReceiveMsg;
 
@@ -38,10 +38,6 @@ pub fn instantiate(
                 .api
                 .addr_canonicalize(msg.owner.unwrap_or(info.sender.clone()).as_str())?,
             rewarder: deps.api.addr_canonicalize(msg.rewarder.as_str())?,
-            oracle_addr: deps.api.addr_canonicalize(msg.oracle_addr.as_str())?,
-            factory_addr: deps.api.addr_canonicalize(msg.factory_addr.as_str())?,
-            // default base_denom pass to factory is orai token
-            base_denom: msg.base_denom.unwrap_or(ORAI_DENOM.to_string()),
         },
     )?;
 
@@ -71,22 +67,6 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             staking_token,
             staker_addrs,
         } => withdraw_reward_others(deps, env, info, staker_addrs, staking_token),
-        ExecuteMsg::AutoStake {
-            assets,
-            slippage_tolerance,
-        } => auto_stake(deps, env, info, assets, slippage_tolerance),
-        ExecuteMsg::AutoStakeHook {
-            staking_token,
-            staker_addr,
-            prev_staking_token_amount,
-        } => auto_stake_hook(
-            deps,
-            env,
-            info,
-            staking_token,
-            staker_addr,
-            prev_staking_token_amount,
-        ),
     }
 }
 
@@ -301,9 +281,6 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     let resp = ConfigResponse {
         owner: deps.api.addr_humanize(&state.owner)?,
         rewarder: deps.api.addr_humanize(&state.rewarder)?,
-        oracle_addr: deps.api.addr_humanize(&state.oracle_addr)?,
-        factory_addr: deps.api.addr_humanize(&state.factory_addr)?,
-        base_denom: state.base_denom,
     };
 
     Ok(resp)

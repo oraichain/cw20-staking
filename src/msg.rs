@@ -9,10 +9,6 @@ pub struct InstantiateMsg {
     // default is sender
     pub owner: Option<Addr>,
     pub rewarder: Addr,
-    pub minter: Option<Addr>,
-    pub oracle_addr: Addr,
-    pub factory_addr: Addr,
-    pub base_denom: Option<String>,
 }
 
 #[cw_serde]
@@ -57,18 +53,6 @@ pub enum ExecuteMsg {
     WithdrawOthers {
         staking_token: Option<Addr>,
         staker_addrs: Vec<Addr>,
-    },
-
-    /// Provides liquidity and automatically stakes the LP tokens
-    AutoStake {
-        assets: [Asset; 2],
-        slippage_tolerance: Option<Decimal>,
-    },
-    /// Hook to stake the minted LP tokens
-    AutoStakeHook {
-        staking_token: Addr,
-        staker_addr: Addr,
-        prev_staking_token_amount: Uint128,
     },
 }
 
@@ -131,9 +115,6 @@ pub enum QueryMsg {
 pub struct ConfigResponse {
     pub owner: Addr,
     pub rewarder: Addr,
-    pub oracle_addr: Addr,
-    pub factory_addr: Addr,
-    pub base_denom: String,
 }
 
 #[cw_serde]

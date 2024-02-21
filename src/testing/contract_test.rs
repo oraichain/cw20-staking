@@ -17,10 +17,6 @@ fn proper_initialization() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("reward"),
-        minter: Some(Addr::unchecked("mint")),
-        oracle_addr: Addr::unchecked("oracle"),
-        factory_addr: Addr::unchecked("factory"),
-        base_denom: None,
     };
 
     let info = mock_info("addr", &[]);
@@ -35,9 +31,6 @@ fn proper_initialization() {
         ConfigResponse {
             owner: Addr::unchecked("owner"),
             rewarder: Addr::unchecked("reward"),
-            oracle_addr: Addr::unchecked("oracle"),
-            factory_addr: Addr::unchecked("factory"),
-            base_denom: ORAI_DENOM.to_string(),
         },
         config
     );
@@ -50,10 +43,6 @@ fn update_config() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("reward"),
-        minter: Some(Addr::unchecked("mint")),
-        oracle_addr: Addr::unchecked("oracle"),
-        factory_addr: Addr::unchecked("factory"),
-        base_denom: None,
     };
 
     let info = mock_info("addr", &[]);
@@ -76,9 +65,6 @@ fn update_config() {
         ConfigResponse {
             owner: Addr::unchecked("owner2"),
             rewarder: Addr::unchecked("reward"),
-            oracle_addr: Addr::unchecked("oracle"),
-            factory_addr: Addr::unchecked("factory"),
-            base_denom: ORAI_DENOM.to_string(),
         },
         config
     );
@@ -104,10 +90,6 @@ fn test_register() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("reward"),
-        minter: Some(Addr::unchecked("mint")),
-        oracle_addr: Addr::unchecked("oracle"),
-        factory_addr: Addr::unchecked("factory"),
-        base_denom: None,
     };
 
     let info = mock_info("addr", &[]);
@@ -166,10 +148,6 @@ fn test_query_staker_pagination() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("reward"),
-        minter: Some(Addr::unchecked("mint")),
-        oracle_addr: Addr::unchecked("oracle"),
-        factory_addr: Addr::unchecked("factory"),
-        base_denom: None,
     };
 
     let info = mock_info("addr", &[]);

@@ -9,14 +9,12 @@ use cosmwasm_std::testing::{
     MockStorage,
 };
 use cosmwasm_std::{
-    attr, coin, from_binary, to_binary, Addr, Api, BankMsg, Coin, CosmosMsg, Decimal, OwnedDeps,
+    attr, coin, from_binary, to_binary, Addr, Api, BankMsg, CosmosMsg, Decimal, OwnedDeps,
     StdError, SubMsg, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use oraiswap::asset::{Asset, AssetInfo, ORAI_DENOM};
-use oraiswap::create_entry_points_testing;
-use oraiswap::pair::PairResponse;
-use oraiswap::testing::{AttributeUtil, MockApp, ATOM_DENOM};
+use oraiswap::testing::ATOM_DENOM;
 
 #[test]
 fn test_query_all_pool_keys() {
@@ -71,10 +69,6 @@ fn test_bond_tokens() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("rewarder"),
-        minter: Some(Addr::unchecked("mint")),
-        oracle_addr: Addr::unchecked("oracle"),
-        factory_addr: Addr::unchecked("factory"),
-        base_denom: None,
     };
 
     let info = mock_info("addr", &[]);
@@ -257,277 +251,6 @@ fn test_unbond() {
                 pending_reward: Uint128::from(0u128),
                 pending_withdraw: vec![],
             }],
-        }
-    );
-}
-
-#[test]
-fn test_auto_stake() {
-    let mut app = MockApp::new(&[(&"addr".to_string(), &[coin(10000000000u128, ORAI_DENOM)])]);
-    app.set_oracle_contract(Box::new(create_entry_points_testing!(oraiswap_oracle)));
-    app.set_token_contract(Box::new(create_entry_points_testing!(oraiswap_token)));
-    app.set_factory_and_pair_contract(
-        Box::new(
-            create_entry_points_testing!(oraiswap_factory)
-                .with_reply(oraiswap_factory::contract::reply),
-        ),
-        Box::new(
-            create_entry_points_testing!(oraiswap_pair).with_reply(oraiswap_pair::contract::reply),
-        ),
-    );
-
-    let asset_addr = app.create_token("asset");
-    let reward_addr = app.create_token("reward");
-    // update other contract token balance
-    app.set_token_balances(&[
-        (
-            &"reward".to_string(),
-            &[(&"addr".to_string(), &Uint128::from(10000000000u128))],
-        ),
-        (
-            &"asset".to_string(),
-            &[(&"addr".to_string(), &Uint128::from(10000000000u128))],
-        ),
-    ]);
-
-    let asset_infos = [
-        AssetInfo::NativeToken {
-            denom: ORAI_DENOM.to_string(),
-        },
-        AssetInfo::Token {
-            contract_addr: asset_addr.clone(),
-        },
-    ];
-
-    // create pair
-    let pair_addr = app.create_pair(asset_infos.clone()).unwrap();
-
-    let PairResponse { info: pair_info } = app
-        .query(pair_addr.clone(), &oraiswap::pair::QueryMsg::Pair {})
-        .unwrap();
-
-    // set allowance
-    app.execute(
-        Addr::unchecked("addr"),
-        asset_addr.clone(),
-        &cw20::Cw20ExecuteMsg::IncreaseAllowance {
-            spender: pair_addr.to_string(),
-            amount: Uint128::from(100u128),
-            expires: None,
-        },
-        &[],
-    )
-    .unwrap();
-
-    // provide liquidity
-    // successfully provide liquidity for the exist pool
-    let msg = oraiswap::pair::ExecuteMsg::ProvideLiquidity {
-        assets: [
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: ORAI_DENOM.to_string(),
-                },
-                amount: Uint128::from(100u128),
-            },
-            Asset {
-                info: AssetInfo::Token {
-                    contract_addr: asset_addr.clone(),
-                },
-                amount: Uint128::from(100u128),
-            },
-        ],
-        slippage_tolerance: None,
-        receiver: None,
-    };
-
-    let _res = app
-        .execute(
-            Addr::unchecked("addr"),
-            pair_addr.clone(),
-            &msg,
-            &[Coin {
-                denom: ORAI_DENOM.to_string(),
-                amount: Uint128::from(100u128),
-            }],
-        )
-        .unwrap();
-
-    let code_id = app.upload(Box::new(create_entry_points_testing!(crate)));
-
-    let msg = InstantiateMsg {
-        owner: Some(Addr::unchecked("owner")),
-        rewarder: reward_addr.clone(),
-        minter: Some(Addr::unchecked("mint")),
-        oracle_addr: app.oracle_addr.clone(),
-        factory_addr: app.factory_addr.clone(),
-        base_denom: None,
-    };
-
-    let staking_addr = app
-        .instantiate(code_id, Addr::unchecked("addr"), &msg, &[], "staking")
-        .unwrap();
-
-    // set allowance
-    app.execute(
-        Addr::unchecked("addr"),
-        asset_addr.clone(),
-        &cw20::Cw20ExecuteMsg::IncreaseAllowance {
-            spender: staking_addr.to_string(),
-            amount: Uint128::from(100u128),
-            expires: None,
-        },
-        &[],
-    )
-    .unwrap();
-
-    let msg = ExecuteMsg::RegisterAsset {
-        staking_token: pair_info.liquidity_token.clone(),
-        unbonding_period: None,
-    };
-
-    let _res = app
-        .execute(Addr::unchecked("owner"), staking_addr.clone(), &msg, &[])
-        .unwrap();
-
-    // no token asset
-    let msg = ExecuteMsg::AutoStake {
-        assets: [
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: ORAI_DENOM.to_string(),
-                },
-                amount: Uint128::from(100u128),
-            },
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: ORAI_DENOM.to_string(),
-                },
-                amount: Uint128::from(100u128),
-            },
-        ],
-        slippage_tolerance: None,
-    };
-
-    let res = app.execute(
-        Addr::unchecked("addr"),
-        staking_addr.clone(),
-        &msg,
-        &[Coin {
-            denom: ORAI_DENOM.to_string(),
-            amount: Uint128::from(100u128),
-        }],
-    );
-
-    app.assert_fail(res);
-
-    // no native asset
-    let msg = ExecuteMsg::AutoStake {
-        assets: [
-            Asset {
-                info: AssetInfo::Token {
-                    contract_addr: asset_addr.clone(),
-                },
-                amount: Uint128::from(1u128),
-            },
-            Asset {
-                info: AssetInfo::Token {
-                    contract_addr: asset_addr.clone(),
-                },
-                amount: Uint128::from(1u128),
-            },
-        ],
-        slippage_tolerance: None,
-    };
-
-    let res = app.execute(Addr::unchecked("addr"), staking_addr.clone(), &msg, &[]);
-
-    app.assert_fail(res);
-
-    let msg = ExecuteMsg::AutoStake {
-        assets: [
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: ORAI_DENOM.to_string(),
-                },
-                amount: Uint128::from(100u128),
-            },
-            Asset {
-                info: AssetInfo::Token {
-                    contract_addr: asset_addr.clone(),
-                },
-                amount: Uint128::from(1u128),
-            },
-        ],
-        slippage_tolerance: None,
-    };
-
-    // attempt with no coins
-    let res = app.execute(Addr::unchecked("addr"), staking_addr.clone(), &msg, &[]);
-    app.assert_fail(res);
-
-    let _res = app
-        .execute(
-            Addr::unchecked("addr"),
-            staking_addr.clone(),
-            &msg,
-            &[Coin {
-                denom: ORAI_DENOM.to_string(),
-                amount: Uint128::from(100u128),
-            }],
-        )
-        .unwrap();
-
-    // wrong asset
-    let msg = ExecuteMsg::AutoStakeHook {
-        staking_token: pair_info.liquidity_token.clone(),
-        staker_addr: Addr::unchecked("addr"),
-        prev_staking_token_amount: Uint128::zero(),
-    };
-    let _res = app.execute(staking_addr.clone(), staking_addr.clone(), &msg, &[]);
-
-    // valid msg
-    let msg = ExecuteMsg::AutoStakeHook {
-        staking_token: pair_info.liquidity_token.clone(),
-        staker_addr: Addr::unchecked("addr"),
-        prev_staking_token_amount: Uint128::zero(),
-    };
-
-    // unauthorized attempt
-    let res = app.execute(Addr::unchecked("addr"), staking_addr.clone(), &msg, &[]);
-    app.assert_fail(res);
-
-    // successfull attempt
-
-    let res = app
-        .execute(staking_addr.clone(), staking_addr.clone(), &msg, &[])
-        .unwrap();
-    assert_eq!(
-        // first attribute is _contract_addr
-        res.get_attributes(1),
-        vec![
-            attr("action", "bond"),
-            attr("staker_addr", "addr"),
-            attr("staking_token", pair_info.liquidity_token.as_str()),
-            attr("amount", "1"),
-        ]
-    );
-
-    let pool_info: PoolInfoResponse = app
-        .query(
-            staking_addr.clone(),
-            &QueryMsg::PoolInfo {
-                staking_token: pair_info.liquidity_token.clone(),
-            },
-        )
-        .unwrap();
-
-    assert_eq!(
-        pool_info,
-        PoolInfoResponse {
-            staking_token: pair_info.liquidity_token.clone(),
-            total_bond_amount: Uint128::from(3u128),
-            reward_index: Decimal::zero(),
-            pending_reward: Uint128::zero(),
         }
     );
 }
@@ -807,10 +530,6 @@ fn _setup_staking(unbonding_period: Option<u64>) -> OwnedDeps<MockStorage, MockA
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("rewarder"),
-        minter: Some(Addr::unchecked("mint")),
-        oracle_addr: Addr::unchecked("oracle"),
-        factory_addr: Addr::unchecked("factory"),
-        base_denom: None,
     };
 
     let info = mock_info("addr", &[]);
