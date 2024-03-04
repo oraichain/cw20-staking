@@ -1,21 +1,20 @@
-use crate::msg::{ExecuteMsg, LockInfo};
+use crate::msg::LockInfo;
 use crate::rewards::before_share_change;
 use crate::state::{
-    insert_lock_info, read_config, read_pool_info, read_unbonding_period,
-    remove_and_accumulate_lock_info, rewards_read, rewards_store, stakers_store, store_pool_info,
-    Config, PoolInfo, RewardInfo,
+    insert_lock_info, read_pool_info, read_unbonding_period, remove_and_accumulate_lock_info,
+    rewards_read, rewards_store, stakers_store, store_pool_info, PoolInfo, RewardInfo,
+    STAKED_BALANCES, STAKED_TOTAL,
 };
 use cosmwasm_std::{
-    attr, to_binary, Addr, Api, CanonicalAddr, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo,
-    Response, StdError, StdResult, Storage, Uint128, WasmMsg,
+    attr, to_binary, Addr, Api, CanonicalAddr, CosmosMsg, Decimal, DepsMut, Env, Response,
+    StdError, StdResult, Storage, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
-use oraiswap::asset::{Asset, AssetInfo, PairInfo};
-use oraiswap::pair::ExecuteMsg as PairExecuteMsg;
-use oraiswap::querier::{query_pair_info, query_token_balance};
+use oraiswap::asset::Asset;
 
 pub fn bond(
     deps: DepsMut,
+    env: Env,
     staker_addr: Addr,
     staking_token: Addr,
     amount: Uint128,
@@ -24,6 +23,7 @@ pub fn bond(
     _increase_bond_amount(
         deps.storage,
         deps.api,
+        env.block.height,
         &staker_addr_raw,
         staking_token.clone(),
         amount,
@@ -65,11 +65,11 @@ pub fn unbond(
         let (_, reward_assets) = _decrease_bond_amount(
             deps.storage,
             deps.api,
+            env.block.height,
             &staker_addr_raw,
             &staking_token,
             amount,
         )?;
-        deps.api.debug(&format!("amount: {}", amount.clone()));
         // withdraw pending_withdraw assets (accumulated when changing reward_per_sec)
         messages.extend(
             reward_assets
@@ -140,6 +140,7 @@ pub fn _withdraw_lock(
 fn _increase_bond_amount(
     storage: &mut dyn Storage,
     api: &dyn Api,
+    height: u64,
     staker_addr: &CanonicalAddr,
     staking_token: Addr,
     amount: Uint128,
@@ -164,7 +165,20 @@ fn _increase_bond_amount(
 
     reward_info.bond_amount += amount;
 
+    STAKED_BALANCES.update(
+        storage,
+        (&asset_key, &api.addr_humanize(staker_addr)?),
+        height,
+        |bal| -> StdResult<Uint128> { Ok(bal.unwrap_or_default().checked_add(amount)?) },
+    )?;
+
+    STAKED_TOTAL.update(storage, &asset_key, height, |total| -> StdResult<Uint128> {
+        // Initialized during instantiate - OK to unwrap.
+        Ok(total.unwrap_or_default().checked_add(amount)?)
+    })?;
+
     rewards_store(storage, staker_addr).save(&asset_key, &reward_info)?;
+
     store_pool_info(storage, &asset_key, &pool_info)?;
 
     // mark this staker belong to the pool the first time
@@ -179,6 +193,7 @@ fn _increase_bond_amount(
 fn _decrease_bond_amount(
     storage: &mut dyn Storage,
     api: &dyn Api,
+    height: u64,
     staker_addr: &CanonicalAddr,
     staking_token: &Addr,
     amount: Uint128,
@@ -203,6 +218,18 @@ fn _decrease_bond_amount(
     // Update pool_info
     pool_info.total_bond_amount = pool_info.total_bond_amount.checked_sub(amount)?;
 
+    // update snapshot
+    STAKED_BALANCES.update(
+        storage,
+        (&asset_key, &api.addr_humanize(staker_addr)?),
+        height,
+        |bal| -> StdResult<Uint128> { Ok(bal.unwrap_or_default().checked_sub(amount)?) },
+    )?;
+    STAKED_TOTAL.update(storage, &asset_key, height, |total| -> StdResult<Uint128> {
+        // Initialized during instantiate - OK to unwrap.
+        Ok(total.unwrap_or_default().checked_sub(amount)?)
+    })?;
+
     if reward_info.pending_reward.is_zero() && reward_info.bond_amount.is_zero() {
         // if pending_withdraw is not empty, then return reward_assets to withdraw money
         reward_assets = reward_info
@@ -216,7 +243,6 @@ fn _decrease_bond_amount(
 
     // Update pool info
     store_pool_info(storage, &asset_key, &pool_info)?;
-    api.debug(&format!("pool_info: {:?}", pool_info));
 
     Ok((staking_token, reward_assets))
 }

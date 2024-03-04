@@ -1,9 +1,10 @@
 use crate::msg::LockInfo;
 use cosmwasm_schema::cw_serde;
+use cw_storage_plus::{SnapshotItem, SnapshotMap, Strategy};
 use oraiswap::{asset::AssetRaw, querier::calc_range_start};
 
 use cosmwasm_std::{
-    CanonicalAddr, Decimal, Order, StdError, StdResult, Storage, Timestamp, Uint128,
+    Addr, CanonicalAddr, Decimal, Order, StdError, StdResult, Storage, Timestamp, Uint128,
 };
 use cosmwasm_storage::{singleton, singleton_read, Bucket, ReadonlyBucket};
 
@@ -195,3 +196,17 @@ pub fn remove_and_accumulate_lock_info(
 
     Ok(accumulate_amount)
 }
+
+pub const STAKED_BALANCES: SnapshotMap<(&[u8], &Addr), Uint128> = SnapshotMap::new(
+    "staked_balances",
+    "staked_balance__checkpoints",
+    "staked_balance__changelog",
+    Strategy::EveryBlock,
+);
+
+pub const STAKED_TOTAL: SnapshotMap<&[u8], Uint128> = SnapshotMap::new(
+    "total_staked",
+    "total_staked__checkpoints",
+    "total_staked__changelog",
+    Strategy::EveryBlock,
+);

@@ -1,7 +1,8 @@
 use crate::contract::{execute, instantiate, query, query_get_pools_infomation};
 use crate::msg::{
     Cw20HookMsg, ExecuteMsg, InstantiateMsg, LockInfosResponse, PoolInfoResponse, QueryMsg,
-    RewardInfoResponse, RewardInfoResponseItem, RewardMsg,
+    RewardInfoResponse, RewardInfoResponseItem, RewardMsg, StakedBalanceAtHeightResponse,
+    TotalStakedAtHeightResponse,
 };
 use crate::state::{store_pool_info, PoolInfo, MAX_LIMIT};
 use cosmwasm_std::testing::{
@@ -520,6 +521,128 @@ pub fn test_multiple_lock() {
     .unwrap();
     let lock_infos = from_binary::<LockInfosResponse>(&binary_response).unwrap();
     assert_eq!(lock_infos.lock_infos.len(), 0);
+}
+
+#[test]
+fn test_balance_and_bonded_snapshot() {
+    let mut deps = _setup_staking(None);
+    let mock_env = mock_env();
+    let info = mock_info("staking", &[]);
+
+    // staker balance
+    let res = query(
+        deps.as_ref(),
+        mock_env.clone(),
+        QueryMsg::StakedBalanceAtHeight {
+            asset_key: Addr::unchecked("staking"),
+            address: "sender".into(),
+            height: None,
+        },
+    )
+    .unwrap();
+
+    let balance = from_binary::<StakedBalanceAtHeightResponse>(&res).unwrap();
+    assert_eq!(balance.balance, Uint128::zero());
+    assert_eq!(balance.height, mock_env.block.height);
+
+    // total_snapshot
+    let res = query(
+        deps.as_ref(),
+        mock_env.clone(),
+        QueryMsg::TotalStakedAtHeight {
+            asset_key: Addr::unchecked("staking"),
+            height: Some(mock_env.clone().block.height + 1),
+        },
+    )
+    .unwrap();
+
+    let balance = from_binary::<TotalStakedAtHeightResponse>(&res).unwrap();
+    assert_eq!(balance.total, Uint128::from(100u128));
+    assert_eq!(balance.height, mock_env.block.height + 1);
+
+    // bond 100 tokens
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "sender".to_string(),
+        amount: Uint128::from(100u128),
+        msg: to_binary(&Cw20HookMsg::Bond {}).unwrap(),
+    });
+
+    let mut skip_100_blocks_env = mock_env.clone();
+    skip_100_blocks_env.block.height += 100;
+    let _res = execute(deps.as_mut(), skip_100_blocks_env.clone(), info, msg).unwrap();
+
+    let res = query(
+        deps.as_ref(),
+        mock_env.clone(),
+        QueryMsg::StakedBalanceAtHeight {
+            asset_key: Addr::unchecked("staking"),
+            address: "sender".into(),
+            height: Some(skip_100_blocks_env.block.height + 1),
+        },
+    )
+    .unwrap();
+    let balance = from_binary::<StakedBalanceAtHeightResponse>(&res).unwrap();
+    assert_eq!(balance.balance, Uint128::from(100u128));
+    // because the block height snapshot is after the execute block
+    assert_eq!(balance.height, mock_env.block.height + 101);
+
+    // total_snapshot
+    let res = query(
+        deps.as_ref(),
+        mock_env.clone(),
+        QueryMsg::TotalStakedAtHeight {
+            asset_key: Addr::unchecked("staking"),
+            height: Some(skip_100_blocks_env.block.height + 1),
+        },
+    )
+    .unwrap();
+
+    let balance = from_binary::<TotalStakedAtHeightResponse>(&res).unwrap();
+    // because the _setup_staking already bond 100 tokens
+    assert_eq!(balance.total, Uint128::from(200u8));
+    assert_eq!(balance.height, mock_env.block.height + 101);
+
+    let msg = ExecuteMsg::Unbond {
+        staking_token: Addr::unchecked("staking"),
+        amount: Uint128::from(100u128),
+    };
+
+    let mut skip_200_blocks_env = mock_env.clone();
+    skip_200_blocks_env.block.height += 200;
+
+    let sender_info = mock_info("sender", &[]);
+    let _res = execute(deps.as_mut(), skip_200_blocks_env.clone(), sender_info, msg).unwrap();
+
+    let res = query(
+        deps.as_ref(),
+        mock_env.clone(),
+        QueryMsg::StakedBalanceAtHeight {
+            asset_key: Addr::unchecked("staking"),
+            address: "sender".into(),
+            height: Some(skip_200_blocks_env.block.height + 1),
+        },
+    )
+    .unwrap();
+    let balance = from_binary::<StakedBalanceAtHeightResponse>(&res).unwrap();
+    assert_eq!(balance.balance, Uint128::zero());
+    // because the block height snapshot is after the execute block
+    assert_eq!(balance.height, mock_env.block.height + 201);
+
+    // total_snapshot
+    let res = query(
+        deps.as_ref(),
+        mock_env.clone(),
+        QueryMsg::TotalStakedAtHeight {
+            asset_key: Addr::unchecked("staking"),
+            height: Some(skip_200_blocks_env.block.height + 1),
+        },
+    )
+    .unwrap();
+
+    let balance = from_binary::<TotalStakedAtHeightResponse>(&res).unwrap();
+    // because the _setup_staking already bond 100 tokens
+    assert_eq!(balance.total, Uint128::from(100u8));
+    assert_eq!(balance.height, mock_env.block.height + 201);
 }
 
 fn _setup_staking(unbonding_period: Option<u64>) -> OwnedDeps<MockStorage, MockApi, MockQuerier> {

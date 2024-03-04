@@ -9,12 +9,13 @@ use crate::staking::{bond, unbond};
 use crate::state::{
     read_all_pool_infos, read_config, read_pool_info, read_rewards_per_sec, read_user_lock_info,
     stakers_read, store_config, store_pool_info, store_rewards_per_sec, store_unbonding_period,
-    Config, PoolInfo,
+    Config, PoolInfo, STAKED_BALANCES, STAKED_TOTAL,
 };
 
 use crate::msg::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, LockInfoResponse, LockInfosResponse,
     MigrateMsg, PoolInfoResponse, QueryMsg, QueryPoolInfoResponse, RewardsPerSecResponse,
+    StakedBalanceAtHeightResponse, TotalStakedAtHeightResponse,
 };
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Api, Binary, CanonicalAddr, Decimal, Deps, DepsMut, Env,
@@ -27,7 +28,7 @@ use cw20::Cw20ReceiveMsg;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
@@ -40,14 +41,13 @@ pub fn instantiate(
             rewarder: deps.api.addr_canonicalize(msg.rewarder.as_str())?,
         },
     )?;
-
     Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
-        ExecuteMsg::Receive(msg) => receive_cw20(deps, info, msg),
+        ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
         ExecuteMsg::UpdateConfig { rewarder, owner } => update_config(deps, info, owner, rewarder),
         ExecuteMsg::UpdateRewardsPerSec {
             staking_token,
@@ -72,12 +72,14 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
 pub fn receive_cw20(
     deps: DepsMut,
+    env: Env,
     info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
 ) -> StdResult<Response> {
     match from_binary(&cw20_msg.msg) {
         Ok(Cw20HookMsg::Bond {}) => bond(
             deps,
+            env,
             Addr::unchecked(cw20_msg.sender),
             info.sender,
             cw20_msg.amount,
@@ -204,7 +206,7 @@ fn register_asset(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
         QueryMsg::PoolInfo { staking_token } => to_binary(&query_pool_info(deps, staking_token)?),
@@ -236,13 +238,23 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             order,
         } => to_binary(&query_lock_infos(
             deps,
-            _env,
+            env,
             staker_addr,
             staking_token,
             start_after,
             limit,
             order,
         )?),
+        QueryMsg::StakedBalanceAtHeight {
+            asset_key,
+            address,
+            height,
+        } => to_binary(&query_staked_balance_at_height(
+            deps, env, asset_key, address, height,
+        )?),
+        QueryMsg::TotalStakedAtHeight { asset_key, height } => {
+            to_binary(&query_total_staked_at_height(deps, env, asset_key, height)?)
+        }
     }
 }
 
@@ -337,6 +349,35 @@ pub fn query_get_pools_infomation(deps: Deps) -> StdResult<Vec<QueryPoolInfoResp
     parse_read_all_pool_infos(deps.api, pool_infos)
 }
 
+pub fn query_staked_balance_at_height(
+    deps: Deps,
+    env: Env,
+    asset_key: Addr,
+    address: String,
+    height: Option<u64>,
+) -> StdResult<StakedBalanceAtHeightResponse> {
+    let asset_key = deps.api.addr_canonicalize(asset_key.as_str())?.to_vec();
+    let address = deps.api.addr_validate(&address)?;
+    let height = height.unwrap_or(env.block.height);
+    let balance = STAKED_BALANCES
+        .may_load_at_height(deps.storage, (&asset_key, &address), height)?
+        .unwrap_or_default();
+    Ok(StakedBalanceAtHeightResponse { balance, height })
+}
+
+pub fn query_total_staked_at_height(
+    deps: Deps,
+    _env: Env,
+    asset_key: Addr,
+    height: Option<u64>,
+) -> StdResult<TotalStakedAtHeightResponse> {
+    let asset_key = deps.api.addr_canonicalize(asset_key.as_str())?.to_vec();
+    let height = height.unwrap_or(_env.block.height);
+    let total = STAKED_TOTAL
+        .may_load_at_height(deps.storage, &asset_key, height)?
+        .unwrap_or_default();
+    Ok(TotalStakedAtHeightResponse { total, height })
+}
 // migrate contract
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
