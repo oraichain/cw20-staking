@@ -9,12 +9,13 @@ use crate::staking::{bond, unbond};
 use crate::state::{
     read_all_pool_infos, read_config, read_pool_info, read_rewards_per_sec, read_user_lock_info,
     stakers_read, store_config, store_pool_info, store_rewards_per_sec, store_unbonding_period,
-    Config, PoolInfo,
+    Config, PoolInfo, STAKED_BALANCES, STAKED_TOTAL,
 };
 
 use crate::msg::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, LockInfoResponse, LockInfosResponse,
     MigrateMsg, PoolInfoResponse, QueryMsg, QueryPoolInfoResponse, RewardsPerSecResponse,
+    StakedBalanceAtHeightResponse, TotalStakedAtHeightResponse,
 };
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Api, Binary, CanonicalAddr, Decimal, Deps, DepsMut, Env,
@@ -27,7 +28,7 @@ use cw20::Cw20ReceiveMsg;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
@@ -40,6 +41,11 @@ pub fn instantiate(
             rewarder: deps.api.addr_canonicalize(msg.rewarder.as_str())?,
         },
     )?;
+    // Initialize state to zero. We do this instead of using
+    // `unwrap_or_default` where this is used as it protects us
+    // against a scenerio where state is cleared by a bad actor and
+    // `unwrap_or_default` carries on.
+    STAKED_TOTAL.save(deps.storage, &Uint128::zero(), env.block.height)?;
 
     Ok(Response::default())
 }
@@ -47,7 +53,7 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
-        ExecuteMsg::Receive(msg) => receive_cw20(deps, info, msg),
+        ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
         ExecuteMsg::UpdateConfig { rewarder, owner } => update_config(deps, info, owner, rewarder),
         ExecuteMsg::UpdateRewardsPerSec {
             staking_token,
@@ -72,12 +78,14 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
 pub fn receive_cw20(
     deps: DepsMut,
+    env: Env,
     info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
 ) -> StdResult<Response> {
     match from_binary(&cw20_msg.msg) {
         Ok(Cw20HookMsg::Bond {}) => bond(
             deps,
+            env,
             Addr::unchecked(cw20_msg.sender),
             info.sender,
             cw20_msg.amount,
@@ -204,7 +212,7 @@ fn register_asset(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
         QueryMsg::PoolInfo { staking_token } => to_binary(&query_pool_info(deps, staking_token)?),
@@ -236,13 +244,19 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             order,
         } => to_binary(&query_lock_infos(
             deps,
-            _env,
+            env,
             staker_addr,
             staking_token,
             start_after,
             limit,
             order,
         )?),
+        QueryMsg::StakedBalanceAtHeight { address, height } => {
+            to_binary(&query_staked_balance_at_height(deps, env, address, height)?)
+        }
+        QueryMsg::TotalStakedAtHeight { height } => {
+            to_binary(&query_total_staked_at_height(deps, env, height)?)
+        }
     }
 }
 
@@ -335,6 +349,32 @@ pub fn parse_read_all_pool_infos(
 pub fn query_get_pools_infomation(deps: Deps) -> StdResult<Vec<QueryPoolInfoResponse>> {
     let pool_infos = read_all_pool_infos(deps.storage)?;
     parse_read_all_pool_infos(deps.api, pool_infos)
+}
+
+pub fn query_staked_balance_at_height(
+    deps: Deps,
+    env: Env,
+    address: String,
+    height: Option<u64>,
+) -> StdResult<StakedBalanceAtHeightResponse> {
+    let address = deps.api.addr_validate(&address)?;
+    let height = height.unwrap_or(env.block.height);
+    let balance = STAKED_BALANCES
+        .may_load_at_height(deps.storage, &address, height)?
+        .unwrap_or_default();
+    Ok(StakedBalanceAtHeightResponse { balance, height })
+}
+
+pub fn query_total_staked_at_height(
+    deps: Deps,
+    _env: Env,
+    height: Option<u64>,
+) -> StdResult<TotalStakedAtHeightResponse> {
+    let height = height.unwrap_or(_env.block.height);
+    let total = STAKED_TOTAL
+        .may_load_at_height(deps.storage, height)?
+        .unwrap_or_default();
+    Ok(TotalStakedAtHeightResponse { total, height })
 }
 
 // migrate contract

@@ -108,6 +108,14 @@ pub enum QueryMsg {
         // so can convert or throw error
         order: Option<i32>,
     },
+    // snapshot
+    #[returns(StakedBalanceAtHeightResponse)]
+    StakedBalanceAtHeight {
+        address: String,
+        height: Option<u64>,
+    },
+    #[returns(TotalStakedAtHeightResponse)]
+    TotalStakedAtHeight { height: Option<u64> },
 }
 
 // We define a custom struct for each query response
@@ -175,4 +183,16 @@ pub struct LockInfosResponse {
     pub staker_addr: Addr,
     pub staking_token: Addr,
     pub lock_infos: Vec<LockInfoResponse>,
+}
+
+#[cw_serde]
+pub struct StakedBalanceAtHeightResponse {
+    pub balance: Uint128,
+    pub height: u64,
+}
+
+#[cw_serde]
+pub struct TotalStakedAtHeightResponse {
+    pub total: Uint128,
+    pub height: u64,
 }
