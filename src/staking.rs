@@ -70,7 +70,6 @@ pub fn unbond(
             &staking_token,
             amount,
         )?;
-        deps.api.debug(&format!("amount: {}", amount.clone()));
         // withdraw pending_withdraw assets (accumulated when changing reward_per_sec)
         messages.extend(
             reward_assets
@@ -244,7 +243,6 @@ fn _decrease_bond_amount(
 
     // Update pool info
     store_pool_info(storage, &asset_key, &pool_info)?;
-    api.debug(&format!("pool_info: {:?}", pool_info));
 
     Ok((staking_token, reward_assets))
 }

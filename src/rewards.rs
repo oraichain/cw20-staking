@@ -339,7 +339,6 @@ fn _read_reward_infos(
 
                 // try convert to AssetInfo based on reward info
                 let staking_token = api.addr_humanize(&CanonicalAddr::from(asset_key))?;
-                api.debug(staking_token.as_str());
                 Ok((staking_token, reward_info))
             })
             .collect::<StdResult<Vec<(Addr, RewardInfo)>>>()?
