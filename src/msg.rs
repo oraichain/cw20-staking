@@ -111,11 +111,15 @@ pub enum QueryMsg {
     // snapshot
     #[returns(StakedBalanceAtHeightResponse)]
     StakedBalanceAtHeight {
+        asset_key: Addr,
         address: String,
         height: Option<u64>,
     },
     #[returns(TotalStakedAtHeightResponse)]
-    TotalStakedAtHeight { height: Option<u64> },
+    TotalStakedAtHeight {
+        asset_key: Addr,
+        height: Option<u64>,
+    },
 }
 
 // We define a custom struct for each query response

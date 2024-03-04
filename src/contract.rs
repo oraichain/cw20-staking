@@ -41,12 +41,6 @@ pub fn instantiate(
             rewarder: deps.api.addr_canonicalize(msg.rewarder.as_str())?,
         },
     )?;
-    // Initialize state to zero. We do this instead of using
-    // `unwrap_or_default` where this is used as it protects us
-    // against a scenerio where state is cleared by a bad actor and
-    // `unwrap_or_default` carries on.
-    STAKED_TOTAL.save(deps.storage, &Uint128::zero(), env.block.height)?;
-
     Ok(Response::default())
 }
 
@@ -251,11 +245,15 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             limit,
             order,
         )?),
-        QueryMsg::StakedBalanceAtHeight { address, height } => {
-            to_binary(&query_staked_balance_at_height(deps, env, address, height)?)
-        }
-        QueryMsg::TotalStakedAtHeight { height } => {
-            to_binary(&query_total_staked_at_height(deps, env, height)?)
+        QueryMsg::StakedBalanceAtHeight {
+            asset_key,
+            address,
+            height,
+        } => to_binary(&query_staked_balance_at_height(
+            deps, env, asset_key, address, height,
+        )?),
+        QueryMsg::TotalStakedAtHeight { asset_key, height } => {
+            to_binary(&query_total_staked_at_height(deps, env, asset_key, height)?)
         }
     }
 }
@@ -354,13 +352,15 @@ pub fn query_get_pools_infomation(deps: Deps) -> StdResult<Vec<QueryPoolInfoResp
 pub fn query_staked_balance_at_height(
     deps: Deps,
     env: Env,
+    asset_key: Addr,
     address: String,
     height: Option<u64>,
 ) -> StdResult<StakedBalanceAtHeightResponse> {
+    let asset_key = deps.api.addr_canonicalize(asset_key.as_str())?.to_vec();
     let address = deps.api.addr_validate(&address)?;
     let height = height.unwrap_or(env.block.height);
     let balance = STAKED_BALANCES
-        .may_load_at_height(deps.storage, &address, height)?
+        .may_load_at_height(deps.storage, (&asset_key, &address), height)?
         .unwrap_or_default();
     Ok(StakedBalanceAtHeightResponse { balance, height })
 }
@@ -368,15 +368,16 @@ pub fn query_staked_balance_at_height(
 pub fn query_total_staked_at_height(
     deps: Deps,
     _env: Env,
+    asset_key: Addr,
     height: Option<u64>,
 ) -> StdResult<TotalStakedAtHeightResponse> {
+    let asset_key = deps.api.addr_canonicalize(asset_key.as_str())?.to_vec();
     let height = height.unwrap_or(_env.block.height);
     let total = STAKED_TOTAL
-        .may_load_at_height(deps.storage, height)?
+        .may_load_at_height(deps.storage, &asset_key, height)?
         .unwrap_or_default();
     Ok(TotalStakedAtHeightResponse { total, height })
 }
-
 // migrate contract
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {

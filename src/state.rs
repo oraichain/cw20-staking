@@ -197,14 +197,14 @@ pub fn remove_and_accumulate_lock_info(
     Ok(accumulate_amount)
 }
 
-pub const STAKED_BALANCES: SnapshotMap<&Addr, Uint128> = SnapshotMap::new(
+pub const STAKED_BALANCES: SnapshotMap<(&[u8], &Addr), Uint128> = SnapshotMap::new(
     "staked_balances",
     "staked_balance__checkpoints",
     "staked_balance__changelog",
     Strategy::EveryBlock,
 );
 
-pub const STAKED_TOTAL: SnapshotItem<Uint128> = SnapshotItem::new(
+pub const STAKED_TOTAL: SnapshotMap<&[u8], Uint128> = SnapshotMap::new(
     "total_staked",
     "total_staked__checkpoints",
     "total_staked__changelog",

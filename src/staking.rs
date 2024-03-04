@@ -168,14 +168,14 @@ fn _increase_bond_amount(
 
     STAKED_BALANCES.update(
         storage,
-        &api.addr_humanize(staker_addr)?,
+        (&asset_key, &api.addr_humanize(staker_addr)?),
         height,
         |bal| -> StdResult<Uint128> { Ok(bal.unwrap_or_default().checked_add(amount)?) },
     )?;
 
-    STAKED_TOTAL.update(storage, height, |total| -> StdResult<Uint128> {
+    STAKED_TOTAL.update(storage, &asset_key, height, |total| -> StdResult<Uint128> {
         // Initialized during instantiate - OK to unwrap.
-        Ok(total.unwrap().checked_add(amount)?)
+        Ok(total.unwrap_or_default().checked_add(amount)?)
     })?;
 
     rewards_store(storage, staker_addr).save(&asset_key, &reward_info)?;
@@ -222,13 +222,13 @@ fn _decrease_bond_amount(
     // update snapshot
     STAKED_BALANCES.update(
         storage,
-        &api.addr_humanize(staker_addr)?,
+        (&asset_key, &api.addr_humanize(staker_addr)?),
         height,
         |bal| -> StdResult<Uint128> { Ok(bal.unwrap_or_default().checked_sub(amount)?) },
     )?;
-    STAKED_TOTAL.update(storage, height, |total| -> StdResult<Uint128> {
+    STAKED_TOTAL.update(storage, &asset_key, height, |total| -> StdResult<Uint128> {
         // Initialized during instantiate - OK to unwrap.
-        Ok(total.unwrap().checked_sub(amount)?)
+        Ok(total.unwrap_or_default().checked_sub(amount)?)
     })?;
 
     if reward_info.pending_reward.is_zero() && reward_info.bond_amount.is_zero() {

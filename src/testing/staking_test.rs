@@ -522,6 +522,12 @@ pub fn test_multiple_lock() {
     assert_eq!(lock_infos.lock_infos.len(), 0);
 }
 
+#[test]
+fn test_bond_snapshot() {
+    let deps = _setup_staking(None);
+    let mock_env = mock_env();
+}
+
 fn _setup_staking(unbonding_period: Option<u64>) -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
     let mut deps = mock_dependencies_with_balance(&[
         coin(10000000000u128, ORAI_DENOM),
