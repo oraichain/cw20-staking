@@ -1380,6 +1380,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "proxy-snapshot"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cosmwasm-vm",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "cw20-base",
+ "oraiswap",
+ "oraiswap-staking",
+ "protobuf",
+ "thiserror",
+]
+
+[[package]]
 name = "ptr_meta"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
