@@ -1,0 +1,41 @@
+[package]
+resolver = '2'
+name = "proxy-snapshot"
+version = "0.1.0"
+authors = ["Oraichain Labs"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/oraichain/cw20-staking"
+homepage = "https://orai.io"
+documentation = "https://github.com/oraichain/oraiswap.git"
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# for quicker tests, cargo test --lib
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+
+[dependencies]
+cosmwasm-std = { version = "=1.2" }
+cosmwasm-schema = { version = "=1.2" }
+cosmwasm-storage = { version = "=1.2" }
+thiserror = "1.0.26"
+cw2 = { version = "1.0.1" }
+cw20 = { version = "1.0.1" }
+cw20-base = { version = "1.0.1" }
+cw-storage-plus = { version = "1.0.1" }
+oraiswap = { git = "https://github.com/oraichain/oraiswap", branch = "main" }
+protobuf = { version = "=3.2.0" }
+oraiswap-staking = { path = "../cw20-staking", features = ["library"] }
+
+
+[dev-dependencies]
+cosmwasm-vm = { version = "=1.2" }
