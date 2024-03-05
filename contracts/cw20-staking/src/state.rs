@@ -1,6 +1,6 @@
 use crate::msg::LockInfo;
 use cosmwasm_schema::cw_serde;
-use cw_storage_plus::{SnapshotItem, SnapshotMap, Strategy};
+use cw_storage_plus::{SnapshotMap, Strategy};
 use oraiswap::{asset::AssetRaw, querier::calc_range_start};
 
 use cosmwasm_std::{
