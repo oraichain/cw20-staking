@@ -7,9 +7,9 @@ use crate::rewards::{
 };
 use crate::staking::{bond, unbond};
 use crate::state::{
-    read_all_pool_infos, read_config, read_pool_info, read_rewards_per_sec, read_user_lock_info,
-    stakers_read, store_config, store_pool_info, store_rewards_per_sec, store_unbonding_period,
-    Config, PoolInfo, STAKED_BALANCES, STAKED_TOTAL,
+    read_all_pool_infos, read_config, read_pool_info, read_rewards_per_sec, read_unbonding_period,
+    read_user_lock_info, stakers_read, store_config, store_pool_info, store_rewards_per_sec,
+    store_unbonding_period, Config, PoolInfo, STAKED_BALANCES, STAKED_TOTAL,
 };
 
 use crate::msg::{
@@ -19,7 +19,7 @@ use crate::msg::{
 };
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Api, Binary, CanonicalAddr, Decimal, Deps, DepsMut, Env,
-    MessageInfo, Order, Response, StdError, StdResult, Uint128,
+    MessageInfo, Order, Response, StdError, StdResult, Storage, Uint128,
 };
 use oraiswap::asset::{Asset, AssetRaw};
 
@@ -28,7 +28,7 @@ use cw20::Cw20ReceiveMsg;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
@@ -152,7 +152,7 @@ fn update_rewards_per_sec(
     // convert assets to raw_assets
     let raw_assets = assets
         .into_iter()
-        .map(|w| Ok(w.to_raw(deps.api)?))
+        .map(|w| w.to_raw(deps.api))
         .collect::<StdResult<Vec<AssetRaw>>>()?;
 
     store_rewards_per_sec(deps.storage, &asset_key, raw_assets)?;
@@ -182,7 +182,7 @@ fn register_asset(
         deps.storage,
         &asset_key.clone(),
         &PoolInfo {
-            staking_token: asset_key,
+            staking_token: asset_key.clone(),
             total_bond_amount: Uint128::zero(),
             reward_index: Decimal::zero(),
             pending_reward: Uint128::zero(),
@@ -191,7 +191,7 @@ fn register_asset(
 
     if let Some(unbonding_period) = unbonding_period {
         if unbonding_period > 0 {
-            store_unbonding_period(deps.storage, staking_token.as_bytes(), unbonding_period)?;
+            store_unbonding_period(deps.storage, &asset_key, unbonding_period)?;
         }
     }
 
@@ -301,11 +301,13 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
 pub fn query_pool_info(deps: Deps, staking_token: Addr) -> StdResult<PoolInfoResponse> {
     let asset_key = deps.api.addr_canonicalize(staking_token.as_str())?;
     let pool_info = read_pool_info(deps.storage, &asset_key)?;
+    let unbonding_period = read_unbonding_period(deps.storage, &asset_key).ok();
     Ok(PoolInfoResponse {
         staking_token: deps.api.addr_humanize(&pool_info.staking_token)?,
         total_bond_amount: pool_info.total_bond_amount,
         reward_index: pool_info.reward_index,
         pending_reward: pool_info.pending_reward,
+        unbonding_period,
     })
 }
 
@@ -316,13 +318,14 @@ pub fn query_rewards_per_sec(deps: Deps, staking_token: Addr) -> StdResult<Rewar
 
     let assets = raw_assets
         .into_iter()
-        .map(|w| Ok(w.to_normal(deps.api)?))
+        .map(|w| w.to_normal(deps.api))
         .collect::<StdResult<Vec<Asset>>>()?;
 
     Ok(RewardsPerSecResponse { assets })
 }
 
 pub fn parse_read_all_pool_infos(
+    storage: &dyn Storage,
     api: &dyn Api,
     pool_infos: Vec<(Vec<u8>, PoolInfo)>,
 ) -> StdResult<Vec<QueryPoolInfoResponse>> {
@@ -331,6 +334,7 @@ pub fn parse_read_all_pool_infos(
         .map(|(key, pool_info)| {
             let asset_key = CanonicalAddr::from(key);
             let staking_token = api.addr_humanize(&asset_key)?;
+            let unbonding_period = read_unbonding_period(storage, &asset_key).ok();
             Ok(QueryPoolInfoResponse {
                 asset_key: staking_token.to_string(),
                 pool_info: PoolInfoResponse {
@@ -338,6 +342,7 @@ pub fn parse_read_all_pool_infos(
                     total_bond_amount: pool_info.total_bond_amount,
                     reward_index: pool_info.reward_index,
                     pending_reward: pool_info.pending_reward,
+                    unbonding_period,
                 },
             })
         })
@@ -346,7 +351,7 @@ pub fn parse_read_all_pool_infos(
 
 pub fn query_get_pools_infomation(deps: Deps) -> StdResult<Vec<QueryPoolInfoResponse>> {
     let pool_infos = read_all_pool_infos(deps.storage)?;
-    parse_read_all_pool_infos(deps.api, pool_infos)
+    parse_read_all_pool_infos(deps.storage, deps.api, pool_infos)
 }
 
 pub fn query_staked_balance_at_height(

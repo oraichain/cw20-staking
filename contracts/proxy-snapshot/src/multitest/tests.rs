@@ -1,8 +1,10 @@
 use cosmwasm_std::{to_binary, Addr, Uint128};
+use cw_utils::Duration;
 use oraiswap::{
     asset::Asset,
     cw_multi_test::{App, Executor},
 };
+use oraiswap_staking::msg::PoolInfoResponse;
 
 use super::{
     contract::ProxySnapshot, cw20_staking_contract::Cw20Staking, mock_cw20::MockCw20Contract,
@@ -10,7 +12,7 @@ use super::{
 
 #[test]
 fn test_query_snapshot_balance() {
-    // Assert
+    // Arrange
     let mut app = App::default();
     let owner = Addr::unchecked("owner");
 
@@ -87,6 +89,14 @@ fn test_query_snapshot_balance() {
     let total = snapshot.query_total_staked_at_height(&app, None);
     let staked_balance = snapshot.query_staked_balace_at_height(&app, &owner, None);
 
+    // Assert
+    let config_token_response = snapshot.query_config_token_staking(&app);
+
+    assert_eq!(
+        config_token_response.unstaking_duration,
+        Some(100).map(Duration::Time)
+    );
+    assert_eq!(config_token_response.token_address, cw20.addr().clone());
     assert_eq!(total.total.u128(), 50u128);
     assert_eq!(staked_balance.balance.u128(), 50u128);
 }

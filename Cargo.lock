@@ -1388,6 +1388,7 @@ dependencies = [
  "cosmwasm-storage",
  "cosmwasm-vm",
  "cw-storage-plus",
+ "cw-utils",
  "cw2",
  "cw20",
  "cw20-base",

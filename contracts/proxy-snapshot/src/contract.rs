@@ -1,7 +1,7 @@
 use crate::{
     msg::{
-        ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, StakedBalanceAtHeightResponse,
-        TotalStakedAtHeightResponse,
+        ConfigTokenStakingResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
+        StakedBalanceAtHeightResponse, TotalStakedAtHeightResponse,
     },
     state::{Config, CONFIG},
 };
@@ -10,6 +10,8 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
+use cw_utils::Duration;
+use oraiswap_staking::msg::PoolInfoResponse;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -78,6 +80,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::StakedBalanceAtHeight { height, address } => {
             to_binary(&query_staked_balance_at_height(deps, env, address, height)?)
         }
+        QueryMsg::GetConfig {} => to_binary(&query_config_token_staking(deps, env)?),
     }
 }
 
@@ -113,6 +116,21 @@ pub fn query_total_staked_at_height(
                 height,
             },
         )
+}
+
+pub fn query_config_token_staking(deps: Deps, _env: Env) -> StdResult<ConfigTokenStakingResponse> {
+    let config = CONFIG.load(deps.storage)?;
+
+    let pool_info = deps.querier.query_wasm_smart::<PoolInfoResponse>(
+        config.staking_contract,
+        &oraiswap_staking::msg::QueryMsg::PoolInfo {
+            staking_token: config.asset_key.clone(),
+        },
+    )?;
+    Ok(ConfigTokenStakingResponse {
+        token_address: config.asset_key,
+        unstaking_duration: pool_info.unbonding_period.map(Duration::Time),
+    })
 }
 
 // migrate contract

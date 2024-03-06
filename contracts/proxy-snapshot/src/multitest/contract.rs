@@ -1,5 +1,6 @@
 use crate::msg::{
-    InstantiateMsg, QueryMsg, StakedBalanceAtHeightResponse, TotalStakedAtHeightResponse,
+    ConfigTokenStakingResponse, InstantiateMsg, QueryMsg, StakedBalanceAtHeightResponse,
+    TotalStakedAtHeightResponse,
 };
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
@@ -72,6 +73,12 @@ impl ProxySnapshot {
     ) -> TotalStakedAtHeightResponse {
         app.wrap()
             .query_wasm_smart(self.addr(), &QueryMsg::TotalStakedAtHeight { height })
+            .unwrap()
+    }
+    #[track_caller]
+    pub fn query_config_token_staking(&self, app: &App) -> ConfigTokenStakingResponse {
+        app.wrap()
+            .query_wasm_smart(self.addr(), &QueryMsg::GetConfig {})
             .unwrap()
     }
 }
