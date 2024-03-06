@@ -39,3 +39,4 @@ oraiswap-staking = { path = "../cw20-staking", features = ["library"] }
 
 [dev-dependencies]
 cosmwasm-vm = { version = "=1.2" }
+cw-multi-test = { version = "0.16.2" }

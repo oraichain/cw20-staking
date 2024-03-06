@@ -1,8 +1,6 @@
 use cosmwasm_std::{to_binary, Addr, Uint128};
-use oraiswap::{
-    asset::Asset,
-    cw_multi_test::{App, Executor},
-};
+use cw_multi_test::{App, Executor};
+use oraiswap::asset::Asset;
 
 use super::{
     contract::ProxySnapshot, cw20_staking_contract::Cw20Staking, mock_cw20::MockCw20Contract,
@@ -56,7 +54,7 @@ fn test_query_snapshot_balance() {
     .unwrap();
 
     // Action
-    // Staked
+    // sSaked
     app.execute_contract(
         owner.clone(),
         cw20.addr().clone(),

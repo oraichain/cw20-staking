@@ -6,7 +6,7 @@ use cw20_base::{
     contract::{execute, instantiate, migrate, query},
     ContractError,
 };
-use oraiswap::cw_multi_test::{App, ContractWrapper, Executor};
+use cw_multi_test::{App, ContractWrapper, Executor};
 
 #[cw_serde]
 pub struct MockCw20Contract(Addr);
