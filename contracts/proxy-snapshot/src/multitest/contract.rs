@@ -4,7 +4,7 @@ use crate::msg::{
 };
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
-use oraiswap::cw_multi_test::{App, ContractWrapper, Executor};
+use cw_multi_test::{App, ContractWrapper, Executor};
 
 use crate::contract::{execute, instantiate, migrate, query};
 

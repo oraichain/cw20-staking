@@ -1387,6 +1387,7 @@ dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
  "cosmwasm-vm",
+ "cw-multi-test",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
