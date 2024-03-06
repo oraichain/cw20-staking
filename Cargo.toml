@@ -12,3 +12,6 @@ rpath = false
 lto = true
 overflow-checks = true
 panic = 'abort'
+
+[workspace.dependencies]
+cranelift-codegen = { version = "0.86.1" }
