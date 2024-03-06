@@ -10,7 +10,7 @@ use cosmwasm_std::{
     StdError, StdResult, Storage, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
-use oraiswap::asset::Asset;
+use oraiswap::asset::{self, Asset};
 
 pub fn bond(
     deps: DepsMut,
@@ -47,6 +47,7 @@ pub fn unbond(
     let staker_addr_raw: CanonicalAddr = deps.api.addr_canonicalize(staker_addr.as_str())?;
     let mut messages = vec![];
     let mut response = Response::new();
+    let asset_key = deps.api.addr_canonicalize(staking_token.as_str())?;
 
     // withdraw_avaiable_lock
     let withdraw_response = _withdraw_lock(deps.storage, &env, &staker_addr, &staking_token)?;
@@ -78,7 +79,7 @@ pub fn unbond(
                 .collect::<StdResult<Vec<CosmosMsg>>>()?,
         );
         // checking bonding period
-        if let Ok(period) = read_unbonding_period(deps.storage, staking_token.as_bytes()) {
+        if let Ok(period) = read_unbonding_period(deps.storage, &asset_key) {
             let unlock_time = env.block.time.plus_seconds(period);
             insert_lock_info(
                 deps.storage,

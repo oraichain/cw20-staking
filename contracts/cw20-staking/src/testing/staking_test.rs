@@ -131,6 +131,7 @@ fn test_bond_tokens() {
             total_bond_amount: Uint128::from(100u128),
             reward_index: Decimal::zero(),
             pending_reward: Uint128::zero(),
+            unbonding_period: None,
         }
     );
 
@@ -159,6 +160,7 @@ fn test_bond_tokens() {
             total_bond_amount: Uint128::from(200u128),
             reward_index: Decimal::zero(),
             pending_reward: Uint128::zero(),
+            unbonding_period: None
         }
     );
 }
@@ -229,6 +231,7 @@ fn test_unbond() {
             total_bond_amount: Uint128::zero(),
             reward_index: Decimal::from_ratio(300u128, 100u128),
             pending_reward: Uint128::zero(),
+            unbonding_period: None
         }
     );
 

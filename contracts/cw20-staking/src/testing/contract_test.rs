@@ -137,6 +137,7 @@ fn test_register() {
             total_bond_amount: Uint128::zero(),
             reward_index: Decimal::zero(),
             pending_reward: Uint128::zero(),
+            unbonding_period: None,
         }
     );
 }

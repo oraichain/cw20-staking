@@ -1,6 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 
 use cosmwasm_std::{Addr, Uint128};
+use cw_utils::Duration;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -26,6 +27,8 @@ pub struct MigrateMsg {}
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(ConfigTokenStakingResponse)]
+    GetConfig {},
     #[returns(ConfigResponse)]
     Config {},
     // snapshot
@@ -36,6 +39,12 @@ pub enum QueryMsg {
     },
     #[returns(TotalStakedAtHeightResponse)]
     TotalStakedAtHeight { height: Option<u64> },
+}
+
+#[cw_serde]
+pub struct ConfigTokenStakingResponse {
+    pub token_address: Addr,
+    pub unstaking_duration: Option<Duration>,
 }
 
 #[cw_serde]

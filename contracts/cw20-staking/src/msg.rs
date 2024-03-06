@@ -141,6 +141,7 @@ pub struct PoolInfoResponse {
     pub total_bond_amount: Uint128,
     pub reward_index: Decimal,
     pub pending_reward: Uint128,
+    pub unbonding_period: Option<u64>,
 }
 
 // We define a custom struct for each query response
