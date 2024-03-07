@@ -545,8 +545,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw20-staking"
+version = "0.2.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cosmwasm-vm",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "cw20-base",
+ "oraiswap",
+ "oraiswap-factory",
+ "oraiswap-oracle",
+ "oraiswap-pair",
+ "oraiswap-token",
+ "protobuf",
+ "thiserror",
+]
+
+[[package]]
 name = "cw20-staking-proxy-snapshot"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -558,8 +579,8 @@ dependencies = [
  "cw2",
  "cw20",
  "cw20-base",
+ "cw20-staking",
  "oraiswap",
- "oraiswap-staking",
  "protobuf",
  "thiserror",
 ]
@@ -1253,27 +1274,6 @@ dependencies = [
  "cw20-base",
  "integer-sqrt",
  "oraiswap",
- "thiserror",
-]
-
-[[package]]
-name = "oraiswap-staking"
-version = "0.2.0"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cosmwasm-vm",
- "cw-storage-plus",
- "cw2",
- "cw20",
- "cw20-base",
- "oraiswap",
- "oraiswap-factory",
- "oraiswap-oracle",
- "oraiswap-pair",
- "oraiswap-token",
- "protobuf",
  "thiserror",
 ]
 

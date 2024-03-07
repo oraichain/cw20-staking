@@ -1,10 +1,10 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
-use cw_multi_test::{App, ContractWrapper, Executor};
-use oraiswap_staking::contract::{execute, instantiate, migrate, query};
-use oraiswap_staking::msg::{
+use cw20_staking::contract::{execute, instantiate, migrate, query};
+use cw20_staking::msg::{
     InstantiateMsg, QueryMsg, StakedBalanceAtHeightResponse, TotalStakedAtHeightResponse,
 };
+use cw_multi_test::{App, ContractWrapper, Executor};
 
 #[cw_serde]
 pub struct Cw20Staking(Addr);

@@ -35,7 +35,7 @@ cw-utils = { version = "1.0.1" }
 cw-storage-plus = { version = "1.0.1" }
 oraiswap = { git = "https://github.com/oraichain/oraiswap", branch = "main" }
 protobuf = { version = "=3.2.0" }
-oraiswap-staking = { path = "../cw20-staking", features = ["library"] }
+cw20-staking = { path = "../cw20-staking", features = ["library"] }
 
 
 [dev-dependencies]

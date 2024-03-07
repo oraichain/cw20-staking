@@ -16,21 +16,22 @@ fn test_query_snapshot_balance() {
     let cw20 = MockCw20Contract::instantiate(&mut app, &owner, &owner).unwrap();
     let asset_key = cw20.addr().clone();
     // contracts instantiation
-    let cw20_staking = Cw20Staking::instantiate(&mut app, &owner, &owner, Some("owner".into()));
+    let cw20_staking_contract =
+        Cw20Staking::instantiate(&mut app, &owner, &owner, Some("owner".into()));
     let snapshot = ProxySnapshot::instantiate(
         &mut app,
         &owner,
         &owner,
         &asset_key,
-        cw20_staking.addr(),
+        cw20_staking_contract.addr(),
         Some("owner".into()),
     );
 
     // setup Cw20Staking contract
     app.execute_contract(
         owner.clone(),
-        cw20_staking.addr().clone(),
-        &oraiswap_staking::msg::ExecuteMsg::RegisterAsset {
+        cw20_staking_contract.addr().clone(),
+        &cw20_staking::msg::ExecuteMsg::RegisterAsset {
             staking_token: asset_key.clone(),
             unbonding_period: Some(100),
         },
@@ -40,8 +41,8 @@ fn test_query_snapshot_balance() {
 
     app.execute_contract(
         owner.clone(),
-        cw20_staking.addr().clone(),
-        &oraiswap_staking::msg::ExecuteMsg::UpdateRewardsPerSec {
+        cw20_staking_contract.addr().clone(),
+        &cw20_staking::msg::ExecuteMsg::UpdateRewardsPerSec {
             staking_token: asset_key.clone(),
             assets: vec![Asset {
                 info: oraiswap::asset::AssetInfo::Token {
@@ -60,9 +61,9 @@ fn test_query_snapshot_balance() {
         owner.clone(),
         cw20.addr().clone(),
         &cw20_base::msg::ExecuteMsg::Send {
-            contract: cw20_staking.addr().clone().to_string(),
+            contract: cw20_staking_contract.addr().clone().to_string(),
             amount: Uint128::from(100u128),
-            msg: to_binary(&oraiswap_staking::msg::Cw20HookMsg::Bond {}).unwrap(),
+            msg: to_binary(&cw20_staking::msg::Cw20HookMsg::Bond {}).unwrap(),
         },
         &[],
     )
@@ -71,8 +72,8 @@ fn test_query_snapshot_balance() {
     // Unstaked
     app.execute_contract(
         owner.clone(),
-        cw20_staking.addr().clone(),
-        &oraiswap_staking::msg::ExecuteMsg::Unbond {
+        cw20_staking_contract.addr().clone(),
+        &cw20_staking::msg::ExecuteMsg::Unbond {
             staking_token: asset_key.clone(),
             amount: Uint128::from(50u128),
         },
