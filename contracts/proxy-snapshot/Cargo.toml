@@ -36,8 +36,8 @@ cw-storage-plus = { version = "1.0.1" }
 oraiswap = { git = "https://github.com/oraichain/oraiswap", branch = "main" }
 protobuf = { version = "=3.2.0" }
 oraiswap-staking = { path = "../cw20-staking", features = ["library"] }
-cranelift-codegen = { workspace = true }
 
 
 [dev-dependencies]
 cosmwasm-vm = { version = "=1.2" }
+cw-multi-test = { version = "0.16.2" }
