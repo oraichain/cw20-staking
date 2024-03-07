@@ -67,6 +67,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             staking_token,
             staker_addrs,
         } => withdraw_reward_others(deps, env, info, staker_addrs, staking_token),
+        ExecuteMsg::UpdateUnbondingPeriod {
+            staking_token,
+            unbonding_period,
+        } => execute_update_unbonding_period(deps, info, staking_token, unbonding_period),
     }
 }
 
@@ -203,6 +207,26 @@ fn register_asset(
             &unbonding_period.unwrap_or(0).to_string(),
         ),
     ]))
+}
+
+fn execute_update_unbonding_period(
+    deps: DepsMut,
+    info: MessageInfo,
+    staking_token: Addr,
+    unbonding_period: u64,
+) -> StdResult<Response> {
+    let config: Config = read_config(deps.storage)?;
+
+    if config.owner != deps.api.addr_canonicalize(info.sender.as_str())? {
+        return Err(StdError::generic_err("unauthorized"));
+    }
+
+    let asset_key = deps.api.addr_canonicalize(staking_token.as_str())?;
+    store_unbonding_period(deps.storage, &asset_key, unbonding_period)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "update_unbonding_period")
+        .add_attribute("unbonding_period", unbonding_period.to_string()))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

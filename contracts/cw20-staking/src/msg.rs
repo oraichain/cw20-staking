@@ -22,6 +22,10 @@ pub enum ExecuteMsg {
         rewarder: Option<Addr>,
         owner: Option<Addr>,
     },
+    UpdateUnbondingPeriod {
+        staking_token: Addr,
+        unbonding_period: u64,
+    },
     RegisterAsset {
         staking_token: Addr,
         unbonding_period: Option<u64>,
