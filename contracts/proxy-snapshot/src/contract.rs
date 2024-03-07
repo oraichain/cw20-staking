@@ -10,8 +10,12 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
+use cw2::set_contract_version;
 use cw_utils::Duration;
 use oraiswap_staking::msg::PoolInfoResponse;
+
+pub(crate) const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
+pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -20,15 +24,14 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     let owner = msg.owner.unwrap_or(info.sender);
     let config = Config {
         owner: deps.api.addr_validate(owner.as_ref())?,
         asset_key: deps.api.addr_validate(msg.asset_key.as_ref())?,
         staking_contract: deps.api.addr_validate(msg.staking_contract.as_ref())?,
     };
-
     CONFIG.save(deps.storage, &config)?;
-
     Ok(Response::default())
 }
 
