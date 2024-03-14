@@ -328,8 +328,8 @@ fn test_unbonding_period_happy_case() {
         staking_token: Addr::unchecked("staking"),
         amount: Uint128::from(50u128),
     };
-    let _res = execute(deps.as_mut(), unbond_env.clone(), info.clone(), msg).unwrap();
-
+    let mut _res = execute(deps.as_mut(), unbond_env.clone(), info.clone(), msg).unwrap();
+    _res.attributes.sort_by(|a, b| a.key.cmp(&b.key));
     let res = query(
         deps.as_ref(),
         unbond_env.clone(),
@@ -349,9 +349,13 @@ fn test_unbonding_period_happy_case() {
     assert_eq!(
         _res.attributes,
         vec![
+            attr("action", "unbond"),
             attr("action", "unbonding"),
-            attr("staker_addr", "addr"),
             attr("amount", Uint128::from(50u128).to_string()),
+            attr("amount", Uint128::from(50u128).to_string()),
+            attr("staker_addr", "addr"),
+            attr("staker_addr", "addr"),
+            attr("staking_token", "staking"),
             attr("staking_token", "staking"),
             attr(
                 "unlock_time",
@@ -363,10 +367,6 @@ fn test_unbonding_period_happy_case() {
                     .seconds()
                     .to_string()
             ),
-            attr("action", "unbond"),
-            attr("staker_addr", "addr"),
-            attr("amount", Uint128::from(50u128).to_string()),
-            attr("staking_token", "staking"),
         ]
     );
     assert_eq!(
