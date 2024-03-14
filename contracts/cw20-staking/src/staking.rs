@@ -10,7 +10,7 @@ use cosmwasm_std::{
     StdError, StdResult, Storage, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
-use oraiswap::asset::{self, Asset};
+use oraiswap::asset::Asset;
 
 pub fn bond(
     deps: DepsMut,
@@ -25,7 +25,7 @@ pub fn bond(
         deps.api,
         env.block.height,
         &staker_addr_raw,
-        staking_token.clone(),
+        &staking_token,
         amount,
     )?;
 
@@ -45,23 +45,12 @@ pub fn unbond(
     amount: Uint128,
 ) -> StdResult<Response> {
     let staker_addr_raw: CanonicalAddr = deps.api.addr_canonicalize(staker_addr.as_str())?;
-    let mut messages = vec![];
-    let mut response = Response::new();
+
     let asset_key = deps.api.addr_canonicalize(staking_token.as_str())?;
 
     // withdraw_avaiable_lock
-    let withdraw_response = _withdraw_lock(deps.storage, &env, &staker_addr, &staking_token)?;
+    let mut response = _withdraw_lock(deps.storage, &env, &staker_addr, &staking_token)?;
 
-    messages.extend(
-        withdraw_response
-            .clone()
-            .messages
-            .into_iter()
-            .map(|msg| msg.msg)
-            .collect::<Vec<CosmosMsg>>(),
-    );
-
-    let withdraw_attrs = withdraw_response.attributes;
     if !amount.is_zero() {
         let (_, reward_assets) = _decrease_bond_amount(
             deps.storage,
@@ -72,11 +61,11 @@ pub fn unbond(
             amount,
         )?;
         // withdraw pending_withdraw assets (accumulated when changing reward_per_sec)
-        messages.extend(
+        response = response.add_messages(
             reward_assets
-                .into_iter()
+                .iter()
                 .map(|ra| ra.into_msg(None, &deps.querier, staker_addr.clone()))
-                .collect::<StdResult<Vec<CosmosMsg>>>()?,
+                .collect::<StdResult<Vec<_>>>()?,
         );
         // checking bonding period
         if let Ok(period) = read_unbonding_period(deps.storage, &asset_key) {
@@ -100,19 +89,12 @@ pub fn unbond(
             ])
         } else {
             let unbond_response = _unbond(&staker_addr, &staking_token, amount)?;
-            messages.extend(
-                unbond_response
-                    .messages
-                    .into_iter()
-                    .map(|msg| msg.msg)
-                    .collect::<Vec<CosmosMsg>>(),
-            );
-            response = response.add_attributes(unbond_response.attributes);
+            response = response
+                .add_submessages(unbond_response.messages)
+                .add_attributes(unbond_response.attributes);
         }
     }
-    Ok(response
-        .add_messages(messages)
-        .add_attributes(withdraw_attrs))
+    Ok(response)
 }
 
 pub fn _withdraw_lock(
@@ -143,7 +125,7 @@ fn _increase_bond_amount(
     api: &dyn Api,
     height: u64,
     staker_addr: &CanonicalAddr,
-    staking_token: Addr,
+    staking_token: &Addr,
     amount: Uint128,
 ) -> StdResult<()> {
     let asset_key = api.addr_canonicalize(staking_token.as_str())?.to_vec();
