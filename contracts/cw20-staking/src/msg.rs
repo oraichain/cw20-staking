@@ -14,7 +14,6 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
-
     ////////////////////////
     /// Owner operations ///
     ////////////////////////
@@ -57,6 +56,9 @@ pub enum ExecuteMsg {
     WithdrawOthers {
         staking_token: Option<Addr>,
         staker_addrs: Vec<Addr>,
+    },
+    Restake {
+        staking_token: Addr,
     },
 }
 
