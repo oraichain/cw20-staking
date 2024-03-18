@@ -1,6 +1,6 @@
 [package]
 resolver = '2'
-name = "oraiswap-staking"
+name = "cw20-staking"
 version = "0.2.0"
 authors = ["Terraform Labs, PTE.", "Oraichain Labs"]
 edition = "2021"
