@@ -197,6 +197,37 @@ pub fn remove_and_accumulate_lock_info(
     Ok(accumulate_amount)
 }
 
+pub fn remove_and_accumulate_lock_info_restake(
+    storage: &mut dyn Storage,
+    asset_key: &[u8],
+    user: &[u8],
+    timestamp: Timestamp,
+) -> StdResult<Uint128> {
+    let mut bucket = Bucket::<Uint128>::multilevel(storage, &[LOCK_INFO, asset_key, user]);
+    let mut remove_timestamps = vec![];
+    let mut accumulate_amount = Uint128::zero();
+
+    // use temporay cursor
+    {
+        let mut cursor = bucket.range(None, None, Order::Descending);
+        let time_in_seconds = timestamp.seconds().to_be_bytes().to_vec();
+        while let Some(Ok((time, amount))) = cursor.next() {
+            if time.cmp(&time_in_seconds) == std::cmp::Ordering::Less {
+                break;
+            }
+            remove_timestamps.push(time);
+            accumulate_amount += amount;
+        }
+    }
+
+    // remove timestamp
+    for time in remove_timestamps {
+        bucket.remove(&time);
+    }
+
+    Ok(accumulate_amount)
+}
+
 pub const STAKED_BALANCES: SnapshotMap<(&[u8], &Addr), Uint128> = SnapshotMap::new(
     "staked_balances",
     "staked_balance__checkpoints",

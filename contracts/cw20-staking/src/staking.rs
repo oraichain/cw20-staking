@@ -2,8 +2,8 @@ use crate::msg::LockInfo;
 use crate::rewards::before_share_change;
 use crate::state::{
     insert_lock_info, read_pool_info, read_unbonding_period, remove_and_accumulate_lock_info,
-    rewards_read, rewards_store, stakers_store, store_pool_info, PoolInfo, RewardInfo,
-    STAKED_BALANCES, STAKED_TOTAL,
+    remove_and_accumulate_lock_info_restake, rewards_read, rewards_store, stakers_store,
+    store_pool_info, PoolInfo, RewardInfo, STAKED_BALANCES, STAKED_TOTAL,
 };
 use cosmwasm_std::{
     attr, to_binary, Addr, Api, CanonicalAddr, CosmosMsg, Decimal, DepsMut, Env, Response,
@@ -95,6 +95,40 @@ pub fn unbond(
         }
     }
     Ok(response)
+}
+
+pub fn restake(
+    deps: DepsMut,
+    env: Env,
+    staker_addr: Addr,
+    staking_token: Addr,
+) -> StdResult<Response> {
+    // execute 10 lock a time
+    let restake_amount = remove_and_accumulate_lock_info_restake(
+        deps.storage,
+        staking_token.as_bytes(),
+        staker_addr.as_bytes(),
+        env.block.time,
+    )?;
+
+    if restake_amount.is_zero() {
+        return Ok(Response::new());
+    }
+
+    _increase_bond_amount(
+        deps.storage,
+        deps.api,
+        env.block.height,
+        &deps.api.addr_canonicalize(&staker_addr.to_string())?,
+        &staking_token,
+        restake_amount,
+    )?;
+
+    Ok(Response::new()
+        .add_attribute("action", "restake")
+        .add_attribute("amount", restake_amount.to_string())
+        .add_attribute("staker_addr", staker_addr.to_string())
+        .add_attribute("staking_token", staking_token.to_string()))
 }
 
 pub fn _withdraw_lock(

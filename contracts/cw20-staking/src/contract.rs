@@ -5,7 +5,7 @@ use crate::rewards::{
     deposit_reward, process_reward_assets, query_all_reward_infos, query_reward_info,
     withdraw_reward, withdraw_reward_others,
 };
-use crate::staking::{bond, unbond};
+use crate::staking::{bond, restake, unbond};
 use crate::state::{
     read_all_pool_infos, read_config, read_pool_info, read_rewards_per_sec, read_unbonding_period,
     read_user_lock_info, stakers_read, store_config, store_pool_info, store_rewards_per_sec,
@@ -71,6 +71,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             staking_token,
             unbonding_period,
         } => execute_update_unbonding_period(deps, info, staking_token, unbonding_period),
+        ExecuteMsg::Restake { staking_token } => restake(deps, env, info.sender, staking_token),
     }
 }
 
