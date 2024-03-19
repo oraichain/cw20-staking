@@ -10,8 +10,8 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
+use cw20_staking::msg::PoolInfoResponse;
 use cw_utils::Duration;
-use oraiswap_staking::msg::PoolInfoResponse;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -94,7 +94,7 @@ pub fn query_staked_balance_at_height(
     deps.querier
         .query_wasm_smart::<StakedBalanceAtHeightResponse>(
             config.staking_contract,
-            &oraiswap_staking::msg::QueryMsg::StakedBalanceAtHeight {
+            &cw20_staking::msg::QueryMsg::StakedBalanceAtHeight {
                 asset_key: config.asset_key,
                 address,
                 height,
@@ -111,7 +111,7 @@ pub fn query_total_staked_at_height(
     deps.querier
         .query_wasm_smart::<TotalStakedAtHeightResponse>(
             config.staking_contract,
-            &oraiswap_staking::msg::QueryMsg::TotalStakedAtHeight {
+            &cw20_staking::msg::QueryMsg::TotalStakedAtHeight {
                 asset_key: config.asset_key,
                 height,
             },
@@ -123,7 +123,7 @@ pub fn query_config_token_staking(deps: Deps, _env: Env) -> StdResult<ConfigToke
 
     let pool_info = deps.querier.query_wasm_smart::<PoolInfoResponse>(
         config.staking_contract,
-        &oraiswap_staking::msg::QueryMsg::PoolInfo {
+        &cw20_staking::msg::QueryMsg::PoolInfo {
             staking_token: config.asset_key.clone(),
         },
     )?;
