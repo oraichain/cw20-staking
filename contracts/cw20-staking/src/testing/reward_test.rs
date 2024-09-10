@@ -375,6 +375,7 @@ fn test_before_share_changes() {
     let msg = ExecuteMsg::Unbond {
         staking_token: Addr::unchecked("staking"),
         amount: Uint128::from(100u128),
+        unbond_period: None,
     };
     let info = mock_info("addr", &[]);
     let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();

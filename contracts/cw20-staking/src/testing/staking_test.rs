@@ -174,6 +174,7 @@ fn test_unbond() {
     let msg = ExecuteMsg::Unbond {
         staking_token: Addr::unchecked("staking"),
         amount: Uint128::from(150u128),
+        unbond_period: None,
     };
 
     let info = mock_info("addr", &[]);
@@ -189,6 +190,7 @@ fn test_unbond() {
     let msg = ExecuteMsg::Unbond {
         staking_token: Addr::unchecked("staking"),
         amount: Uint128::from(100u128),
+        unbond_period: None,
     };
 
     let info = mock_info("addr", &[]);
@@ -268,6 +270,7 @@ fn test_unbonding_period_happy_case() {
     let msg = ExecuteMsg::Unbond {
         staking_token: Addr::unchecked("staking"),
         amount: Uint128::from(50u128),
+        unbond_period: None,
     };
     let info = mock_info("addr", &[]);
     let mut unbond_env = mock_env();
@@ -328,6 +331,7 @@ fn test_unbonding_period_happy_case() {
     let msg = ExecuteMsg::Unbond {
         staking_token: Addr::unchecked("staking"),
         amount: Uint128::from(50u128),
+        unbond_period: None,
     };
     let mut _res = execute(deps.as_mut(), unbond_env.clone(), info.clone(), msg).unwrap();
     _res.attributes.sort_by(|a, b| a.key.cmp(&b.key));
@@ -398,6 +402,7 @@ fn test_unbonding_period_happy_case() {
     let msg = ExecuteMsg::Unbond {
         staking_token: Addr::unchecked("staking"),
         amount: Uint128::from(0u128),
+        unbond_period: None,
     };
     let _res = execute(deps.as_mut(), unbond_env.clone(), info, msg).unwrap();
 
@@ -451,6 +456,7 @@ pub fn test_multiple_lock() {
         let msg = ExecuteMsg::Unbond {
             staking_token: Addr::unchecked("staking"),
             amount: Uint128::from(1u128),
+            unbond_period: None,
         };
         let mut clone_unbonded = unbond_env.clone();
         clone_unbonded.block.time = clone_unbonded
@@ -483,6 +489,7 @@ pub fn test_multiple_lock() {
     let msg = ExecuteMsg::Unbond {
         staking_token: Addr::unchecked("staking"),
         amount: Uint128::from(0u128),
+        unbond_period: None,
     };
 
     let res = execute(deps.as_mut(), unbond_env.clone(), info.clone(), msg).unwrap();
@@ -609,6 +616,7 @@ fn test_balance_and_bonded_snapshot() {
     let msg = ExecuteMsg::Unbond {
         staking_token: Addr::unchecked("staking"),
         amount: Uint128::from(100u128),
+        unbond_period: None,
     };
 
     let mut skip_200_blocks_env = mock_env.clone();
@@ -661,6 +669,7 @@ fn test_restake() {
         let msg = ExecuteMsg::Unbond {
             staking_token: Addr::unchecked("staking"),
             amount: Uint128::from(1u128),
+            unbond_period: None,
         };
         let mut clone_unbonded = unbond_env.clone();
         clone_unbonded.block.time = clone_unbonded

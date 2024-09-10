@@ -76,6 +76,7 @@ fn test_query_snapshot_balance() {
         &cw20_staking::msg::ExecuteMsg::Unbond {
             staking_token: asset_key.clone(),
             amount: Uint128::from(50u128),
+            unbond_period: None,
         },
         &[],
     )

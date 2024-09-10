@@ -69,7 +69,8 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::Unbond {
             staking_token,
             amount,
-        } => unbond(deps, env, info.sender, staking_token, amount),
+            unbond_period,
+        } => unbond(deps, env, info.sender, staking_token, amount, unbond_period),
         ExecuteMsg::Withdraw { staking_token } => withdraw_reward(deps, env, info, staking_token),
         ExecuteMsg::WithdrawOthers {
             staking_token,
@@ -266,6 +267,12 @@ fn execute_update_instant_withdraw_option(
         return Err(StdError::generic_err("unauthorized"));
     }
 
+    // validate fee
+    if fee.gt(&Decimal::one()) {
+        return Err(StdError::generic_err(
+            "Instant withdraw fee must be less than or equal 1",
+        ));
+    }
     INSTANT_WITHDRAWS.save(deps.storage, (&staking_token, unbonding_period), &fee)?;
 
     Ok(Response::new()

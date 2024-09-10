@@ -1,9 +1,10 @@
 use crate::msg::LockInfo;
 use crate::rewards::before_share_change;
 use crate::state::{
-    insert_lock_info, read_pool_info, read_unbonding_period, remove_and_accumulate_lock_info,
-    remove_and_accumulate_lock_info_restake, rewards_read, rewards_store, stakers_store,
-    store_pool_info, PoolInfo, RewardInfo, STAKED_BALANCES, STAKED_TOTAL,
+    insert_lock_info, read_config, read_pool_info, read_unbonding_period,
+    remove_and_accumulate_lock_info, remove_and_accumulate_lock_info_restake, rewards_read,
+    rewards_store, stakers_store, store_pool_info, PoolInfo, RewardInfo, INSTANT_WITHDRAWS,
+    STAKED_BALANCES, STAKED_TOTAL,
 };
 use cosmwasm_std::{
     attr, to_binary, Addr, Api, CanonicalAddr, CosmosMsg, Decimal, DepsMut, Env, Response,
@@ -43,6 +44,7 @@ pub fn unbond(
     staker_addr: Addr,
     staking_token: Addr,
     amount: Uint128,
+    unbond_period: Option<u64>,
 ) -> StdResult<Response> {
     let staker_addr_raw: CanonicalAddr = deps.api.addr_canonicalize(staker_addr.as_str())?;
 
@@ -68,14 +70,41 @@ pub fn unbond(
                 .collect::<StdResult<Vec<_>>>()?,
         );
         // checking bonding period
-        if let Ok(period) = read_unbonding_period(deps.storage, &asset_key) {
+        let period: u64;
+        let mut amount_after_fee = amount;
+        if let Some(unbond_period) = unbond_period {
+            let config = read_config(deps.storage)?;
+            period = unbond_period;
+            // charge fee
+            let fee_percent =
+                INSTANT_WITHDRAWS.load(deps.storage, (&staking_token, unbond_period))?;
+            let fee_amount = amount * fee_percent;
+            amount_after_fee -= fee_amount;
+
+            // transfer fee to fee_receiver
+            response = response.add_message(WasmMsg::Execute {
+                contract_addr: staking_token.to_string(),
+                msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                    recipient: deps
+                        .api
+                        .addr_humanize(&config.withdraw_fee_receiver)?
+                        .to_string(),
+                    amount: fee_amount,
+                })?,
+                funds: vec![],
+            });
+        } else {
+            period = read_unbonding_period(deps.storage, &asset_key).unwrap_or_default();
+        }
+
+        if period > 0 {
             let unlock_time = env.block.time.plus_seconds(period);
             insert_lock_info(
                 deps.storage,
                 staking_token.as_bytes(),
                 staker_addr.as_bytes(),
                 LockInfo {
-                    amount,
+                    amount: amount_after_fee,
                     unlock_time,
                 },
             )?;
@@ -88,7 +117,7 @@ pub fn unbond(
                 attr("unlock_time", unlock_time.seconds().to_string()),
             ])
         } else {
-            let unbond_response = _unbond(&staker_addr, &staking_token, amount)?;
+            let unbond_response = _unbond(&staker_addr, &staking_token, amount_after_fee)?;
             response = response
                 .add_submessages(unbond_response.messages)
                 .add_attributes(unbond_response.attributes);

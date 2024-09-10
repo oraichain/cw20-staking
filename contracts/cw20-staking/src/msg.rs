@@ -48,6 +48,7 @@ pub enum ExecuteMsg {
     Unbond {
         staking_token: Addr,
         amount: Uint128,
+        unbond_period: Option<u64>,
     },
     /// Withdraw pending rewards
     Withdraw {
