@@ -9,7 +9,7 @@ use crate::staking::{bond, restake, unbond};
 use crate::state::{
     read_all_pool_infos, read_config, read_pool_info, read_rewards_per_sec, read_unbonding_period,
     read_user_lock_info, stakers_read, store_config, store_pool_info, store_rewards_per_sec,
-    store_unbonding_period, Config, PoolInfo, STAKED_BALANCES, STAKED_TOTAL,
+    store_unbonding_period, Config, PoolInfo, INSTANT_WITHDRAWS, STAKED_BALANCES, STAKED_TOTAL,
 };
 
 use crate::msg::{
@@ -39,6 +39,9 @@ pub fn instantiate(
                 .api
                 .addr_canonicalize(msg.owner.unwrap_or(info.sender.clone()).as_str())?,
             rewarder: deps.api.addr_canonicalize(msg.rewarder.as_str())?,
+            withdraw_fee_receiver: deps
+                .api
+                .addr_canonicalize(msg.withdraw_fee_receiver.as_str())?,
         },
     )?;
     Ok(Response::default())
@@ -72,6 +75,15 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             unbonding_period,
         } => execute_update_unbonding_period(deps, info, staking_token, unbonding_period),
         ExecuteMsg::Restake { staking_token } => restake(deps, env, info.sender, staking_token),
+        ExecuteMsg::UpdateInstantWithdrawOption {
+            staking_token,
+            period,
+            fee,
+        } => execute_update_instant_withdraw_option(deps, info, staking_token, period, fee),
+        ExecuteMsg::RemoveInstantWithdrawOption {
+            staking_token,
+            period,
+        } => execute_remove_instant_withdraw_option(deps, info, staking_token, period),
     }
 }
 
@@ -227,6 +239,48 @@ fn execute_update_unbonding_period(
 
     Ok(Response::new()
         .add_attribute("action", "update_unbonding_period")
+        .add_attribute("unbonding_period", unbonding_period.to_string()))
+}
+
+fn execute_update_instant_withdraw_option(
+    deps: DepsMut,
+    info: MessageInfo,
+    staking_token: Addr,
+    unbonding_period: u64,
+    fee: Decimal,
+) -> StdResult<Response> {
+    let config: Config = read_config(deps.storage)?;
+
+    if config.owner != deps.api.addr_canonicalize(info.sender.as_str())? {
+        return Err(StdError::generic_err("unauthorized"));
+    }
+
+    INSTANT_WITHDRAWS.save(deps.storage, (&staking_token, unbonding_period), &fee)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "update_instant_withdraw_option")
+        .add_attribute("staking_token", staking_token.to_string())
+        .add_attribute("unbonding_period", unbonding_period.to_string())
+        .add_attribute("fee", fee.to_string()))
+}
+
+fn execute_remove_instant_withdraw_option(
+    deps: DepsMut,
+    info: MessageInfo,
+    staking_token: Addr,
+    unbonding_period: u64,
+) -> StdResult<Response> {
+    let config: Config = read_config(deps.storage)?;
+
+    if config.owner != deps.api.addr_canonicalize(info.sender.as_str())? {
+        return Err(StdError::generic_err("unauthorized"));
+    }
+
+    INSTANT_WITHDRAWS.remove(deps.storage, (&staking_token, unbonding_period));
+
+    Ok(Response::new()
+        .add_attribute("action", "remove_instant_withdraw_option")
+        .add_attribute("staking_token", staking_token.to_string())
         .add_attribute("unbonding_period", unbonding_period.to_string()))
 }
 

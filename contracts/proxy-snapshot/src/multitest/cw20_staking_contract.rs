@@ -33,6 +33,7 @@ impl Cw20Staking {
             &InstantiateMsg {
                 owner: Some(owner.clone()),
                 rewarder: Addr::unchecked("rewarder"),
+                withdraw_fee_receiver: Addr::unchecked("withdraw_fee_receiver"),
             },
             &[],
             "treasury contract",

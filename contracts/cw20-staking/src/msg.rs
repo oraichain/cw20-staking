@@ -9,6 +9,7 @@ pub struct InstantiateMsg {
     // default is sender
     pub owner: Option<Addr>,
     pub rewarder: Addr,
+    pub withdraw_fee_receiver: Addr,
 }
 
 #[cw_serde]
@@ -59,6 +60,15 @@ pub enum ExecuteMsg {
     },
     Restake {
         staking_token: Addr,
+    },
+    UpdateInstantWithdrawOption {
+        staking_token: Addr,
+        period: u64,
+        fee: Decimal,
+    },
+    RemoveInstantWithdrawOption {
+        staking_token: Addr,
+        period: u64,
     },
 }
 

@@ -70,6 +70,7 @@ fn test_bond_tokens() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("rewarder"),
+        withdraw_fee_receiver: Addr::unchecked("withdraw_fee_receiver"),
     };
 
     let info = mock_info("addr", &[]);
@@ -721,6 +722,7 @@ fn _setup_staking(unbonding_period: Option<u64>) -> OwnedDeps<MockStorage, MockA
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("rewarder"),
+        withdraw_fee_receiver: Addr::unchecked("withdraw_fee_receiver"),
     };
 
     let info = mock_info("addr", &[]);

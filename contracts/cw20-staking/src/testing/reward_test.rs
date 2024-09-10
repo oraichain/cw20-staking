@@ -22,6 +22,7 @@ fn test_deposit_reward() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("rewarder"),
+        withdraw_fee_receiver: Addr::unchecked("withdraw_fee_receiver"),
     };
 
     let info = mock_info("addr", &[]);
@@ -149,6 +150,7 @@ fn test_deposit_reward_when_no_bonding() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("rewarder"),
+        withdraw_fee_receiver: Addr::unchecked("withdraw_fee_receiver"),
     };
 
     let info = mock_info("addr", &[]);
@@ -264,6 +266,7 @@ fn test_before_share_changes() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("rewarder"),
+        withdraw_fee_receiver: Addr::unchecked("withdraw_fee_receiver"),
     };
 
     let info = mock_info("addr", &[]);
@@ -431,6 +434,7 @@ fn test_withdraw() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: reward_addr.clone(),
+        withdraw_fee_receiver: Addr::unchecked("withdraw_fee_receiver"),
     };
 
     let code_id = app.upload(Box::new(create_entry_points_testing!(crate)));
@@ -576,6 +580,7 @@ fn test_update_rewards_per_sec() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("rewarder"),
+        withdraw_fee_receiver: Addr::unchecked("withdraw_fee_receiver"),
     };
     let staking_token = Addr::unchecked("staking_token");
 
@@ -717,6 +722,7 @@ fn test_update_rewards_per_sec_with_multiple_bond() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("rewarder"),
+        withdraw_fee_receiver: Addr::unchecked("withdraw_fee_receiver"),
     };
 
     let info = mock_info("addr", &[]);

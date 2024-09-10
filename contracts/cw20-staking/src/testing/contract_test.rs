@@ -17,6 +17,7 @@ fn proper_initialization() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("reward"),
+        withdraw_fee_receiver: Addr::unchecked("withdraw_fee_receiver"),
     };
 
     let info = mock_info("addr", &[]);
@@ -43,6 +44,7 @@ fn update_config() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("reward"),
+        withdraw_fee_receiver: Addr::unchecked("withdraw_fee_receiver"),
     };
 
     let info = mock_info("addr", &[]);
@@ -90,6 +92,7 @@ fn test_register() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("reward"),
+        withdraw_fee_receiver: Addr::unchecked("withdraw_fee_receiver"),
     };
 
     let info = mock_info("addr", &[]);
@@ -149,6 +152,7 @@ fn test_query_staker_pagination() {
     let msg = InstantiateMsg {
         owner: Some(Addr::unchecked("owner")),
         rewarder: Addr::unchecked("reward"),
+        withdraw_fee_receiver: Addr::unchecked("withdraw_fee_receiver"),
     };
 
     let info = mock_info("addr", &[]);
