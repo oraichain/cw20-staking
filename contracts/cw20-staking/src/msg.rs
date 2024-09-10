@@ -21,6 +21,7 @@ pub enum ExecuteMsg {
     UpdateConfig {
         rewarder: Option<Addr>,
         owner: Option<Addr>,
+        withdraw_fee_receiver: Option<Addr>,
     },
     UpdateUnbondingPeriod {
         staking_token: Addr,
@@ -136,13 +137,23 @@ pub enum QueryMsg {
         asset_key: Addr,
         height: Option<u64>,
     },
+    #[returns(Decimal)]
+    InstantWithdrawFee { staking_token: Addr, period: u64 },
+    #[returns(Vec<InstantWithdrawResponse>)]
+    InstantWithdrawOptions { staking_token: Addr },
 }
 
+#[cw_serde]
+pub struct InstantWithdrawResponse {
+    pub period: u64,
+    pub fee: Decimal,
+}
 // We define a custom struct for each query response
 #[cw_serde]
 pub struct ConfigResponse {
     pub owner: Addr,
     pub rewarder: Addr,
+    pub withdraw_fee_receiver: Addr,
 }
 
 #[cw_serde]

@@ -13,9 +13,10 @@ use crate::state::{
 };
 
 use crate::msg::{
-    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, LockInfoResponse, LockInfosResponse,
-    MigrateMsg, PoolInfoResponse, QueryMsg, QueryPoolInfoResponse, RewardsPerSecResponse,
-    StakedBalanceAtHeightResponse, TotalStakedAtHeightResponse,
+    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantWithdrawResponse, InstantiateMsg,
+    LockInfoResponse, LockInfosResponse, MigrateMsg, PoolInfoResponse, QueryMsg,
+    QueryPoolInfoResponse, RewardsPerSecResponse, StakedBalanceAtHeightResponse,
+    TotalStakedAtHeightResponse,
 };
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Api, Binary, CanonicalAddr, Decimal, Deps, DepsMut, Env,
@@ -51,7 +52,11 @@ pub fn instantiate(
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
-        ExecuteMsg::UpdateConfig { rewarder, owner } => update_config(deps, info, owner, rewarder),
+        ExecuteMsg::UpdateConfig {
+            rewarder,
+            owner,
+            withdraw_fee_receiver,
+        } => update_config(deps, info, owner, rewarder, withdraw_fee_receiver),
         ExecuteMsg::UpdateRewardsPerSec {
             staking_token,
             assets,
@@ -110,6 +115,7 @@ pub fn update_config(
     info: MessageInfo,
     owner: Option<Addr>,
     rewarder: Option<Addr>,
+    withdraw_fee_receiver: Option<Addr>,
 ) -> StdResult<Response> {
     let mut config: Config = read_config(deps.storage)?;
 
@@ -123,6 +129,11 @@ pub fn update_config(
 
     if let Some(rewarder) = rewarder {
         config.rewarder = deps.api.addr_canonicalize(rewarder.as_str())?;
+    }
+
+    if let Some(withdraw_fee_receiver) = withdraw_fee_receiver {
+        config.withdraw_fee_receiver =
+            deps.api.addr_canonicalize(withdraw_fee_receiver.as_str())?;
     }
 
     store_config(deps.storage, &config)?;
@@ -334,6 +345,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::TotalStakedAtHeight { asset_key, height } => {
             to_binary(&query_total_staked_at_height(deps, env, asset_key, height)?)
         }
+        QueryMsg::InstantWithdrawFee {
+            staking_token,
+            period,
+        } => to_binary(&INSTANT_WITHDRAWS.load(deps.storage, (&staking_token, period))?),
+        QueryMsg::InstantWithdrawOptions { staking_token } => {
+            to_binary(&query_instant_withdraw_options(deps, staking_token)?)
+        }
     }
 }
 
@@ -372,6 +390,7 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     let resp = ConfigResponse {
         owner: deps.api.addr_humanize(&state.owner)?,
         rewarder: deps.api.addr_humanize(&state.rewarder)?,
+        withdraw_fee_receiver: deps.api.addr_humanize(&state.withdraw_fee_receiver)?,
     };
 
     Ok(resp)
@@ -462,6 +481,23 @@ pub fn query_total_staked_at_height(
         .unwrap_or_default();
     Ok(TotalStakedAtHeightResponse { total, height })
 }
+
+pub fn query_instant_withdraw_options(
+    deps: Deps,
+    staking_token: Addr,
+) -> StdResult<Vec<InstantWithdrawResponse>> {
+    let res: Vec<InstantWithdrawResponse> = INSTANT_WITHDRAWS
+        .prefix(&staking_token)
+        .range(deps.storage, None, None, Order::Ascending)
+        .into_iter()
+        .map(|item| {
+            let (period, fee) = item.unwrap();
+            InstantWithdrawResponse { period, fee }
+        })
+        .collect();
+    Ok(res)
+}
+
 // migrate contract
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {

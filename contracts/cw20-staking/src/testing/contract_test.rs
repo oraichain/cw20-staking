@@ -32,6 +32,7 @@ fn proper_initialization() {
         ConfigResponse {
             owner: Addr::unchecked("owner"),
             rewarder: Addr::unchecked("reward"),
+            withdraw_fee_receiver: Addr::unchecked("withdraw_fee_receiver"),
         },
         config
     );
@@ -55,6 +56,7 @@ fn update_config() {
     let msg = ExecuteMsg::UpdateConfig {
         owner: Some(Addr::unchecked("owner2")),
         rewarder: None,
+        withdraw_fee_receiver: None,
     };
 
     let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -67,6 +69,7 @@ fn update_config() {
         ConfigResponse {
             owner: Addr::unchecked("owner2"),
             rewarder: Addr::unchecked("reward"),
+            withdraw_fee_receiver: Addr::unchecked("withdraw_fee_receiver"),
         },
         config
     );
@@ -76,6 +79,7 @@ fn update_config() {
     let msg = ExecuteMsg::UpdateConfig {
         rewarder: None,
         owner: None,
+        withdraw_fee_receiver: None,
     };
 
     let res = execute(deps.as_mut(), mock_env(), info, msg);
