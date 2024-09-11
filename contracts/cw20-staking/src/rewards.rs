@@ -36,9 +36,7 @@ pub fn deposit_reward(
         let mut normal_reward = reward_msg.total_accumulation_amount;
 
         // normal rewards are array of Assets
-        if pool_info.total_bond_amount.is_zero() {
-            pool_info.pending_reward += normal_reward;
-        } else {
+        if !pool_info.total_bond_amount.is_zero() {
             normal_reward += pool_info.pending_reward;
             let normal_reward_per_bond =
                 Decimal::from_ratio(normal_reward, pool_info.total_bond_amount);

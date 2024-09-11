@@ -216,7 +216,7 @@ fn test_deposit_reward_when_no_bonding() {
         res_cmp,
         PoolInfoResponse {
             reward_index: Decimal::zero(),
-            pending_reward: Uint128::from(100u128),
+            pending_reward: Uint128::zero(),
             ..res
         }
     );
@@ -250,7 +250,7 @@ fn test_deposit_reward_when_no_bonding() {
         res_cmp,
         PoolInfoResponse {
             reward_index: Decimal::zero(),
-            pending_reward: Uint128::from(100u128),
+            pending_reward: Uint128::zero(),
             ..res
         }
     );
