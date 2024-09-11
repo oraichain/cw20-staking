@@ -54,29 +54,19 @@ pub fn unbond(
     let mut response = _withdraw_lock(deps.storage, &env, &staker_addr, &staking_token)?;
 
     if !amount.is_zero() {
-        let (_, reward_assets) = _decrease_bond_amount(
-            deps.storage,
-            deps.api,
-            env.block.height,
-            &staker_addr_raw,
-            &staking_token,
-            amount,
-        )?;
-        // withdraw pending_withdraw assets (accumulated when changing reward_per_sec)
-        response = response.add_messages(
-            reward_assets
-                .iter()
-                .map(|ra| ra.into_msg(None, &deps.querier, staker_addr.clone()))
-                .collect::<StdResult<Vec<_>>>()?,
-        );
-        // checking bonding period
         let period: u64;
         let mut amount_after_fee = amount;
+
         if let Some(unbond_period) = unbond_period {
             let config = read_config(deps.storage)?;
             period = unbond_period;
             // charge fee
-            let fee_percent = UNBOND_OPTIONS.load(deps.storage, (&staking_token, unbond_period))?;
+            let fee_percent = UNBOND_OPTIONS
+                .load(deps.storage, (&staking_token, unbond_period))
+                .or_else(|_e| {
+                    return Err(StdError::generic_err("This unbond options doesn't exist"));
+                })?;
+
             let fee_amount = amount * fee_percent;
             amount_after_fee -= fee_amount;
 
@@ -95,6 +85,23 @@ pub fn unbond(
         } else {
             period = read_unbonding_period(deps.storage, &asset_key).unwrap_or_default();
         }
+
+        let (_, reward_assets) = _decrease_bond_amount(
+            deps.storage,
+            deps.api,
+            env.block.height,
+            &staker_addr_raw,
+            &staking_token,
+            amount,
+        )?;
+        // withdraw pending_withdraw assets (accumulated when changing reward_per_sec)
+        response = response.add_messages(
+            reward_assets
+                .iter()
+                .map(|ra| ra.into_msg(None, &deps.querier, staker_addr.clone()))
+                .collect::<StdResult<Vec<_>>>()?,
+        );
+        // checking bonding period
 
         if period > 0 {
             let unlock_time = env.block.time.plus_seconds(period);

@@ -1,7 +1,7 @@
 use crate::contract::{execute, instantiate, query, query_get_pools_infomation};
 use crate::msg::{
-    Cw20HookMsg, ExecuteMsg, InstantiateMsg, LockInfosResponse, PoolInfoResponse, QueryMsg,
-    RewardInfoResponse, RewardInfoResponseItem, RewardMsg, StakedBalanceAtHeightResponse,
+    Cw20HookMsg, ExecuteMsg, InstantiateMsg, LockInfoResponse, LockInfosResponse, PoolInfoResponse,
+    QueryMsg, RewardInfoResponse, RewardInfoResponseItem, RewardMsg, StakedBalanceAtHeightResponse,
     TotalStakedAtHeightResponse,
 };
 use crate::state::{store_pool_info, PoolInfo, MAX_LIMIT};
@@ -818,4 +818,202 @@ fn _setup_staking(unbonding_period: Option<u64>) -> OwnedDeps<MockStorage, MockA
     let info = mock_info("owner", &[]);
     let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     deps
+}
+
+#[test]
+fn test_unbond_with_fee() {
+    let unbonding_period = 100;
+    let mut deps = _setup_staking(Some(unbonding_period));
+
+    // normal unbond
+
+    let msg = ExecuteMsg::Unbond {
+        staking_token: Addr::unchecked("staking"),
+        amount: Uint128::from(50u128),
+        unbond_period: None,
+    };
+    let info = mock_info("addr", &[]);
+    let mut unbond_env = mock_env();
+
+    let _res = execute(deps.as_mut(), unbond_env.clone(), info.clone(), msg).unwrap();
+
+    assert_eq!(
+        _res.attributes,
+        vec![
+            attr("action", "unbonding"),
+            attr("staker_addr", "addr"),
+            attr("amount", Uint128::from(50u128).to_string()),
+            attr("staking_token", "staking"),
+            attr(
+                "unlock_time",
+                unbond_env
+                    .clone()
+                    .block
+                    .time
+                    .plus_seconds(unbonding_period)
+                    .seconds()
+                    .to_string()
+            ),
+        ]
+    );
+
+    let lock_ids = from_binary::<LockInfosResponse>(
+        &query(
+            deps.as_ref(),
+            unbond_env.clone(),
+            QueryMsg::LockInfos {
+                staker_addr: Addr::unchecked("addr"),
+                staking_token: Addr::unchecked("staking"),
+                start_after: None,
+                limit: None,
+                order: None,
+            },
+        )
+        .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(lock_ids.lock_infos.len(), 1);
+    assert_eq!(
+        lock_ids.lock_infos,
+        vec![LockInfoResponse {
+            amount: Uint128::from(50u128),
+            unlock_time: unbond_env
+                .clone()
+                .block
+                .time
+                .plus_seconds(unbonding_period)
+                .seconds()
+        }]
+    );
+
+    // unbond with period 20 and fee 10% failed because this option does't exist
+    let msg = ExecuteMsg::Unbond {
+        staking_token: Addr::unchecked("staking"),
+        amount: Uint128::from(50u128),
+        unbond_period: Some(20),
+    };
+    let res = execute(
+        deps.as_mut(),
+        unbond_env.clone(),
+        mock_info("addr", &[]),
+        msg,
+    );
+
+    match res {
+        Err(StdError::GenericErr { msg, .. }) => {
+            assert_eq!(msg, "This unbond options doesn't exist")
+        }
+        _ => panic!("Must return error"),
+    }
+
+    // register unbond option with 10% fee
+    let msg = ExecuteMsg::UpdateUnbondOption {
+        staking_token: Addr::unchecked("staking"),
+        period: 20,
+        fee: Decimal::from_ratio(1u128, 10u128),
+    };
+    execute(
+        deps.as_mut(),
+        unbond_env.clone(),
+        mock_info("owner", &[]),
+        msg,
+    )
+    .unwrap();
+
+    // unbond success
+    let msg = ExecuteMsg::Unbond {
+        staking_token: Addr::unchecked("staking"),
+        amount: Uint128::from(10u128),
+        unbond_period: Some(20),
+    };
+    let _res = execute(
+        deps.as_mut(),
+        unbond_env.clone(),
+        mock_info("addr", &[]),
+        msg.clone(),
+    )
+    .unwrap();
+
+    let lock_ids = from_binary::<LockInfosResponse>(
+        &query(
+            deps.as_ref(),
+            unbond_env.clone(),
+            QueryMsg::LockInfos {
+                staker_addr: Addr::unchecked("addr"),
+                staking_token: Addr::unchecked("staking"),
+                start_after: None,
+                limit: None,
+                order: None,
+            },
+        )
+        .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(lock_ids.lock_infos.len(), 2);
+    assert_eq!(
+        lock_ids.lock_infos,
+        vec![
+            LockInfoResponse {
+                amount: Uint128::from(9u128),
+                unlock_time: unbond_env.clone().block.time.plus_seconds(20).seconds()
+            },
+            LockInfoResponse {
+                amount: Uint128::from(50u128),
+                unlock_time: unbond_env
+                    .clone()
+                    .block
+                    .time
+                    .plus_seconds(unbonding_period)
+                    .seconds()
+            }
+        ]
+    );
+
+    unbond_env.block.time = unbond_env.block.time.plus_seconds(21);
+    let msg = ExecuteMsg::Unbond {
+        staking_token: Addr::unchecked("staking"),
+        amount: Uint128::from(0u128),
+        unbond_period: None,
+    };
+    let _res = execute(deps.as_mut(), unbond_env.clone(), info, msg).unwrap();
+
+    let res = query(
+        deps.as_ref(),
+        unbond_env.clone(),
+        QueryMsg::LockInfos {
+            staker_addr: Addr::unchecked("addr"),
+            staking_token: Addr::unchecked("staking"),
+            start_after: None,
+            limit: None,
+            order: None,
+        },
+    )
+    .unwrap();
+
+    let lock_ids = from_binary::<LockInfosResponse>(&res).unwrap();
+    assert_eq!(lock_ids.lock_infos.len(), 1);
+
+    assert_eq!(
+        _res.attributes,
+        vec![
+            attr("action", "unbond"),
+            attr("staker_addr", "addr"),
+            attr("amount", Uint128::from(9u128).to_string()),
+            attr("staking_token", "staking"),
+        ]
+    );
+    assert_eq!(
+        _res.messages,
+        vec![SubMsg::new(WasmMsg::Execute {
+            contract_addr: "staking".to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: "addr".to_string(),
+                amount: Uint128::from(9u128),
+            })
+            .unwrap(),
+            funds: vec![],
+        }),]
+    )
 }

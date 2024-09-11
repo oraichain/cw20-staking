@@ -17,7 +17,7 @@ pub static PREFIX_REWARDS_PER_SEC: &[u8] = b"rewards_per_sec_v3";
 pub static UNBONDING_PERIOD: &[u8] = b"unbonding_period";
 pub static LOCK_INFO: &[u8] = b"locking_users";
 
-// Instant withdraw option
+// unbond option
 pub const UNBOND_OPTIONS: Map<(&Addr, u64), Decimal> = Map::new("unbond_options");
 
 pub const DEFAULT_LIMIT: u32 = 10;
