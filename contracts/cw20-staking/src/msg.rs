@@ -63,12 +63,12 @@ pub enum ExecuteMsg {
     Restake {
         staking_token: Addr,
     },
-    UpdateInstantWithdrawOption {
+    UpdateUnbondOption {
         staking_token: Addr,
         period: u64,
         fee: Decimal,
     },
-    RemoveInstantWithdrawOption {
+    RemoveUnbondOption {
         staking_token: Addr,
         period: u64,
     },
@@ -139,13 +139,13 @@ pub enum QueryMsg {
         height: Option<u64>,
     },
     #[returns(Decimal)]
-    InstantWithdrawFee { staking_token: Addr, period: u64 },
-    #[returns(Vec<InstantWithdrawResponse>)]
-    InstantWithdrawOptions { staking_token: Addr },
+    UnbondFee { staking_token: Addr, period: u64 },
+    #[returns(Vec<UnbondOptionResponse>)]
+    UnbondOptions { staking_token: Addr },
 }
 
 #[cw_serde]
-pub struct InstantWithdrawResponse {
+pub struct UnbondOptionResponse {
     pub period: u64,
     pub fee: Decimal,
 }

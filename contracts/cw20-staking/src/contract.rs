@@ -9,14 +9,13 @@ use crate::staking::{bond, restake, unbond};
 use crate::state::{
     read_all_pool_infos, read_config, read_pool_info, read_rewards_per_sec, read_unbonding_period,
     read_user_lock_info, stakers_read, store_config, store_pool_info, store_rewards_per_sec,
-    store_unbonding_period, Config, PoolInfo, INSTANT_WITHDRAWS, STAKED_BALANCES, STAKED_TOTAL,
+    store_unbonding_period, Config, PoolInfo, STAKED_BALANCES, STAKED_TOTAL, UNBOND_OPTIONS,
 };
 
 use crate::msg::{
-    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantWithdrawResponse, InstantiateMsg,
-    LockInfoResponse, LockInfosResponse, MigrateMsg, PoolInfoResponse, QueryMsg,
-    QueryPoolInfoResponse, RewardsPerSecResponse, StakedBalanceAtHeightResponse,
-    TotalStakedAtHeightResponse,
+    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, LockInfoResponse, LockInfosResponse,
+    MigrateMsg, PoolInfoResponse, QueryMsg, QueryPoolInfoResponse, RewardsPerSecResponse,
+    StakedBalanceAtHeightResponse, TotalStakedAtHeightResponse, UnbondOptionResponse,
 };
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Api, Binary, CanonicalAddr, Decimal, Deps, DepsMut, Env,
@@ -81,15 +80,15 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             unbonding_period,
         } => execute_update_unbonding_period(deps, info, staking_token, unbonding_period),
         ExecuteMsg::Restake { staking_token } => restake(deps, env, info.sender, staking_token),
-        ExecuteMsg::UpdateInstantWithdrawOption {
+        ExecuteMsg::UpdateUnbondOption {
             staking_token,
             period,
             fee,
-        } => execute_update_instant_withdraw_option(deps, info, staking_token, period, fee),
-        ExecuteMsg::RemoveInstantWithdrawOption {
+        } => execute_update_unbond_option(deps, info, staking_token, period, fee),
+        ExecuteMsg::RemoveUnbondOption {
             staking_token,
             period,
-        } => execute_remove_instant_withdraw_option(deps, info, staking_token, period),
+        } => execute_remove_unbond_option(deps, info, staking_token, period),
     }
 }
 
@@ -254,7 +253,7 @@ fn execute_update_unbonding_period(
         .add_attribute("unbonding_period", unbonding_period.to_string()))
 }
 
-fn execute_update_instant_withdraw_option(
+fn execute_update_unbond_option(
     deps: DepsMut,
     info: MessageInfo,
     staking_token: Addr,
@@ -270,10 +269,10 @@ fn execute_update_instant_withdraw_option(
     // validate fee
     if fee.gt(&Decimal::one()) {
         return Err(StdError::generic_err(
-            "Instant withdraw fee must be less than or equal 1",
+            "Unbond fee must be less than or equal 1",
         ));
     }
-    INSTANT_WITHDRAWS.save(deps.storage, (&staking_token, unbonding_period), &fee)?;
+    UNBOND_OPTIONS.save(deps.storage, (&staking_token, unbonding_period), &fee)?;
 
     Ok(Response::new()
         .add_attribute("action", "update_instant_withdraw_option")
@@ -282,7 +281,7 @@ fn execute_update_instant_withdraw_option(
         .add_attribute("fee", fee.to_string()))
 }
 
-fn execute_remove_instant_withdraw_option(
+fn execute_remove_unbond_option(
     deps: DepsMut,
     info: MessageInfo,
     staking_token: Addr,
@@ -294,7 +293,7 @@ fn execute_remove_instant_withdraw_option(
         return Err(StdError::generic_err("unauthorized"));
     }
 
-    INSTANT_WITHDRAWS.remove(deps.storage, (&staking_token, unbonding_period));
+    UNBOND_OPTIONS.remove(deps.storage, (&staking_token, unbonding_period));
 
     Ok(Response::new()
         .add_attribute("action", "remove_instant_withdraw_option")
@@ -352,12 +351,12 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::TotalStakedAtHeight { asset_key, height } => {
             to_binary(&query_total_staked_at_height(deps, env, asset_key, height)?)
         }
-        QueryMsg::InstantWithdrawFee {
+        QueryMsg::UnbondFee {
             staking_token,
             period,
-        } => to_binary(&INSTANT_WITHDRAWS.load(deps.storage, (&staking_token, period))?),
-        QueryMsg::InstantWithdrawOptions { staking_token } => {
-            to_binary(&query_instant_withdraw_options(deps, staking_token)?)
+        } => to_binary(&UNBOND_OPTIONS.load(deps.storage, (&staking_token, period))?),
+        QueryMsg::UnbondOptions { staking_token } => {
+            to_binary(&query_unbond_options(deps, staking_token)?)
         }
     }
 }
@@ -489,17 +488,17 @@ pub fn query_total_staked_at_height(
     Ok(TotalStakedAtHeightResponse { total, height })
 }
 
-pub fn query_instant_withdraw_options(
+pub fn query_unbond_options(
     deps: Deps,
     staking_token: Addr,
-) -> StdResult<Vec<InstantWithdrawResponse>> {
-    let res: Vec<InstantWithdrawResponse> = INSTANT_WITHDRAWS
+) -> StdResult<Vec<UnbondOptionResponse>> {
+    let res: Vec<UnbondOptionResponse> = UNBOND_OPTIONS
         .prefix(&staking_token)
         .range(deps.storage, None, None, Order::Ascending)
         .into_iter()
         .map(|item| {
             let (period, fee) = item.unwrap();
-            InstantWithdrawResponse { period, fee }
+            UnbondOptionResponse { period, fee }
         })
         .collect();
     Ok(res)

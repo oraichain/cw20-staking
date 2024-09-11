@@ -3,8 +3,8 @@ use crate::rewards::before_share_change;
 use crate::state::{
     insert_lock_info, read_config, read_pool_info, read_unbonding_period,
     remove_and_accumulate_lock_info, remove_and_accumulate_lock_info_restake, rewards_read,
-    rewards_store, stakers_store, store_pool_info, PoolInfo, RewardInfo, INSTANT_WITHDRAWS,
-    STAKED_BALANCES, STAKED_TOTAL,
+    rewards_store, stakers_store, store_pool_info, PoolInfo, RewardInfo, STAKED_BALANCES,
+    STAKED_TOTAL, UNBOND_OPTIONS,
 };
 use cosmwasm_std::{
     attr, to_binary, Addr, Api, CanonicalAddr, CosmosMsg, Decimal, DepsMut, Env, Response,
@@ -76,8 +76,7 @@ pub fn unbond(
             let config = read_config(deps.storage)?;
             period = unbond_period;
             // charge fee
-            let fee_percent =
-                INSTANT_WITHDRAWS.load(deps.storage, (&staking_token, unbond_period))?;
+            let fee_percent = UNBOND_OPTIONS.load(deps.storage, (&staking_token, unbond_period))?;
             let fee_amount = amount * fee_percent;
             amount_after_fee -= fee_amount;
 

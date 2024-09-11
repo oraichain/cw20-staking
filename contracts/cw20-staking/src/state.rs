@@ -18,7 +18,7 @@ pub static UNBONDING_PERIOD: &[u8] = b"unbonding_period";
 pub static LOCK_INFO: &[u8] = b"locking_users";
 
 // Instant withdraw option
-pub const INSTANT_WITHDRAWS: Map<(&Addr, u64), Decimal> = Map::new("instant_withdraws");
+pub const UNBOND_OPTIONS: Map<(&Addr, u64), Decimal> = Map::new("unbond_options");
 
 pub const DEFAULT_LIMIT: u32 = 10;
 pub const MAX_LIMIT: u32 = 30;
