@@ -82,7 +82,11 @@ pub enum Cw20HookMsg {
 
 /// We currently take no arguments for migrations
 #[cw_serde]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub owner: Addr,
+    pub rewarder: Addr,
+    pub withdraw_fee_receiver: Addr,
+}
 
 /// We currently take no arguments for migrations
 #[cw_serde]

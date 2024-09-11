@@ -505,6 +505,16 @@ pub fn query_unbond_options(
 
 // migrate contract
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> StdResult<Response> {
+    store_config(
+        deps.storage,
+        &Config {
+            owner: deps.api.addr_canonicalize(msg.owner.as_str())?,
+            rewarder: deps.api.addr_canonicalize(msg.rewarder.as_str())?,
+            withdraw_fee_receiver: deps
+                .api
+                .addr_canonicalize(msg.withdraw_fee_receiver.as_str())?,
+        },
+    )?;
     Ok(Response::default())
 }
