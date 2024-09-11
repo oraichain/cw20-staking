@@ -42,7 +42,7 @@ pub fn deposit_reward(
             normal_reward += pool_info.pending_reward;
             let normal_reward_per_bond =
                 Decimal::from_ratio(normal_reward, pool_info.total_bond_amount);
-            pool_info.reward_index = pool_info.reward_index + normal_reward_per_bond;
+            pool_info.reward_index += normal_reward_per_bond;
             pool_info.pending_reward = Uint128::zero();
         }
 
@@ -77,9 +77,8 @@ pub fn withdraw_reward(
     let messages = reward_assets
         .into_iter()
         .map(|ra| {
-            Ok(ra
-                .to_normal(deps.api)?
-                .into_msg(None, &deps.querier, info.sender.clone())?)
+            ra.to_normal(deps.api)?
+                .into_msg(None, &deps.querier, info.sender.clone())
         })
         .collect::<StdResult<Vec<CosmosMsg>>>()?;
 
@@ -144,7 +143,7 @@ pub fn process_reward_assets(
 
     // single reward withdraw, using Vec to store reference variable in local function
     let reward_pairs = if let Some(asset_key) = asset_key {
-        let reward_info = rewards_bucket.may_load(&asset_key)?;
+        let reward_info = rewards_bucket.may_load(asset_key)?;
         if let Some(reward_info) = reward_info {
             vec![(asset_key.to_vec(), reward_info)]
         } else {
@@ -301,7 +300,7 @@ fn _read_reward_infos_response(
             let pending_withdraw = reward_info
                 .pending_withdraw
                 .into_iter()
-                .map(|pw| Ok(pw.to_normal(api)?))
+                .map(|pw| pw.to_normal(api))
                 .collect::<StdResult<Vec<Asset>>>()?;
 
             Ok(RewardInfoResponseItem {

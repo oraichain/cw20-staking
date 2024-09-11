@@ -63,9 +63,7 @@ pub fn unbond(
             // charge fee
             let fee_percent = UNBOND_OPTIONS
                 .load(deps.storage, (&staking_token, unbond_period))
-                .or_else(|_e| {
-                    return Err(StdError::generic_err("This unbond options doesn't exist"));
-                })?;
+                .map_err(|_e| StdError::generic_err("This unbond options doesn't exist"))?;
 
             let fee_amount = amount * fee_percent;
             amount_after_fee -= fee_amount;
@@ -154,7 +152,7 @@ pub fn restake(
         deps.storage,
         deps.api,
         env.block.height,
-        &deps.api.addr_canonicalize(&staker_addr.to_string())?,
+        &deps.api.addr_canonicalize(staker_addr.as_ref())?,
         &staking_token,
         restake_amount,
     )?;

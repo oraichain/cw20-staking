@@ -495,7 +495,6 @@ pub fn query_unbond_options(
     let res: Vec<UnbondOptionResponse> = UNBOND_OPTIONS
         .prefix(&staking_token)
         .range(deps.storage, None, None, Order::Ascending)
-        .into_iter()
         .map(|item| {
             let (period, fee) = item.unwrap();
             UnbondOptionResponse { period, fee }
