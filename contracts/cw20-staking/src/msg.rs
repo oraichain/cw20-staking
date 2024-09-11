@@ -9,6 +9,7 @@ pub struct InstantiateMsg {
     // default is sender
     pub owner: Option<Addr>,
     pub rewarder: Addr,
+    pub withdraw_fee_receiver: Addr,
 }
 
 #[cw_serde]
@@ -20,6 +21,7 @@ pub enum ExecuteMsg {
     UpdateConfig {
         rewarder: Option<Addr>,
         owner: Option<Addr>,
+        withdraw_fee_receiver: Option<Addr>,
     },
     UpdateUnbondingPeriod {
         staking_token: Addr,
@@ -46,6 +48,7 @@ pub enum ExecuteMsg {
     Unbond {
         staking_token: Addr,
         amount: Uint128,
+        unbond_period: Option<u64>,
     },
     /// Withdraw pending rewards
     Withdraw {
@@ -60,6 +63,15 @@ pub enum ExecuteMsg {
     Restake {
         staking_token: Addr,
     },
+    UpdateUnbondOption {
+        staking_token: Addr,
+        period: u64,
+        fee: Decimal,
+    },
+    RemoveUnbondOption {
+        staking_token: Addr,
+        period: u64,
+    },
 }
 
 #[cw_serde]
@@ -70,7 +82,11 @@ pub enum Cw20HookMsg {
 
 /// We currently take no arguments for migrations
 #[cw_serde]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub owner: Addr,
+    pub rewarder: Addr,
+    pub withdraw_fee_receiver: Addr,
+}
 
 /// We currently take no arguments for migrations
 #[cw_serde]
@@ -126,13 +142,23 @@ pub enum QueryMsg {
         asset_key: Addr,
         height: Option<u64>,
     },
+    #[returns(Decimal)]
+    UnbondFee { staking_token: Addr, period: u64 },
+    #[returns(Vec<UnbondOptionResponse>)]
+    UnbondOptions { staking_token: Addr },
 }
 
+#[cw_serde]
+pub struct UnbondOptionResponse {
+    pub period: u64,
+    pub fee: Decimal,
+}
 // We define a custom struct for each query response
 #[cw_serde]
 pub struct ConfigResponse {
     pub owner: Addr,
     pub rewarder: Addr,
+    pub withdraw_fee_receiver: Addr,
 }
 
 #[cw_serde]

@@ -1,6 +1,6 @@
 use crate::msg::LockInfo;
 use cosmwasm_schema::cw_serde;
-use cw_storage_plus::{SnapshotMap, Strategy};
+use cw_storage_plus::{Map, SnapshotMap, Strategy};
 use oraiswap::{asset::AssetRaw, querier::calc_range_start};
 
 use cosmwasm_std::{
@@ -17,6 +17,9 @@ pub static PREFIX_REWARDS_PER_SEC: &[u8] = b"rewards_per_sec_v3";
 pub static UNBONDING_PERIOD: &[u8] = b"unbonding_period";
 pub static LOCK_INFO: &[u8] = b"locking_users";
 
+// unbond option
+pub const UNBOND_OPTIONS: Map<(&Addr, u64), Decimal> = Map::new("unbond_options");
+
 pub const DEFAULT_LIMIT: u32 = 10;
 pub const MAX_LIMIT: u32 = 30;
 
@@ -24,6 +27,7 @@ pub const MAX_LIMIT: u32 = 30;
 pub struct Config {
     pub owner: CanonicalAddr,
     pub rewarder: CanonicalAddr,
+    pub withdraw_fee_receiver: CanonicalAddr,
 }
 
 pub fn store_config(storage: &mut dyn Storage, config: &Config) -> StdResult<()> {

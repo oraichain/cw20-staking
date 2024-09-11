@@ -9,13 +9,13 @@ use crate::staking::{bond, restake, unbond};
 use crate::state::{
     read_all_pool_infos, read_config, read_pool_info, read_rewards_per_sec, read_unbonding_period,
     read_user_lock_info, stakers_read, store_config, store_pool_info, store_rewards_per_sec,
-    store_unbonding_period, Config, PoolInfo, STAKED_BALANCES, STAKED_TOTAL,
+    store_unbonding_period, Config, PoolInfo, STAKED_BALANCES, STAKED_TOTAL, UNBOND_OPTIONS,
 };
 
 use crate::msg::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, LockInfoResponse, LockInfosResponse,
     MigrateMsg, PoolInfoResponse, QueryMsg, QueryPoolInfoResponse, RewardsPerSecResponse,
-    StakedBalanceAtHeightResponse, TotalStakedAtHeightResponse,
+    StakedBalanceAtHeightResponse, TotalStakedAtHeightResponse, UnbondOptionResponse,
 };
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Api, Binary, CanonicalAddr, Decimal, Deps, DepsMut, Env,
@@ -39,6 +39,9 @@ pub fn instantiate(
                 .api
                 .addr_canonicalize(msg.owner.unwrap_or(info.sender.clone()).as_str())?,
             rewarder: deps.api.addr_canonicalize(msg.rewarder.as_str())?,
+            withdraw_fee_receiver: deps
+                .api
+                .addr_canonicalize(msg.withdraw_fee_receiver.as_str())?,
         },
     )?;
     Ok(Response::default())
@@ -48,7 +51,11 @@ pub fn instantiate(
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
-        ExecuteMsg::UpdateConfig { rewarder, owner } => update_config(deps, info, owner, rewarder),
+        ExecuteMsg::UpdateConfig {
+            rewarder,
+            owner,
+            withdraw_fee_receiver,
+        } => update_config(deps, info, owner, rewarder, withdraw_fee_receiver),
         ExecuteMsg::UpdateRewardsPerSec {
             staking_token,
             assets,
@@ -61,7 +68,8 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::Unbond {
             staking_token,
             amount,
-        } => unbond(deps, env, info.sender, staking_token, amount),
+            unbond_period,
+        } => unbond(deps, env, info.sender, staking_token, amount, unbond_period),
         ExecuteMsg::Withdraw { staking_token } => withdraw_reward(deps, env, info, staking_token),
         ExecuteMsg::WithdrawOthers {
             staking_token,
@@ -72,6 +80,15 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             unbonding_period,
         } => execute_update_unbonding_period(deps, info, staking_token, unbonding_period),
         ExecuteMsg::Restake { staking_token } => restake(deps, env, info.sender, staking_token),
+        ExecuteMsg::UpdateUnbondOption {
+            staking_token,
+            period,
+            fee,
+        } => execute_update_unbond_option(deps, info, staking_token, period, fee),
+        ExecuteMsg::RemoveUnbondOption {
+            staking_token,
+            period,
+        } => execute_remove_unbond_option(deps, info, staking_token, period),
     }
 }
 
@@ -98,6 +115,7 @@ pub fn update_config(
     info: MessageInfo,
     owner: Option<Addr>,
     rewarder: Option<Addr>,
+    withdraw_fee_receiver: Option<Addr>,
 ) -> StdResult<Response> {
     let mut config: Config = read_config(deps.storage)?;
 
@@ -111,6 +129,11 @@ pub fn update_config(
 
     if let Some(rewarder) = rewarder {
         config.rewarder = deps.api.addr_canonicalize(rewarder.as_str())?;
+    }
+
+    if let Some(withdraw_fee_receiver) = withdraw_fee_receiver {
+        config.withdraw_fee_receiver =
+            deps.api.addr_canonicalize(withdraw_fee_receiver.as_str())?;
     }
 
     store_config(deps.storage, &config)?;
@@ -230,6 +253,54 @@ fn execute_update_unbonding_period(
         .add_attribute("unbonding_period", unbonding_period.to_string()))
 }
 
+fn execute_update_unbond_option(
+    deps: DepsMut,
+    info: MessageInfo,
+    staking_token: Addr,
+    unbonding_period: u64,
+    fee: Decimal,
+) -> StdResult<Response> {
+    let config: Config = read_config(deps.storage)?;
+
+    if config.owner != deps.api.addr_canonicalize(info.sender.as_str())? {
+        return Err(StdError::generic_err("unauthorized"));
+    }
+
+    // validate fee
+    if fee.gt(&Decimal::one()) {
+        return Err(StdError::generic_err(
+            "Unbond fee must be less than or equal 1",
+        ));
+    }
+    UNBOND_OPTIONS.save(deps.storage, (&staking_token, unbonding_period), &fee)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "update_instant_withdraw_option")
+        .add_attribute("staking_token", staking_token.to_string())
+        .add_attribute("unbonding_period", unbonding_period.to_string())
+        .add_attribute("fee", fee.to_string()))
+}
+
+fn execute_remove_unbond_option(
+    deps: DepsMut,
+    info: MessageInfo,
+    staking_token: Addr,
+    unbonding_period: u64,
+) -> StdResult<Response> {
+    let config: Config = read_config(deps.storage)?;
+
+    if config.owner != deps.api.addr_canonicalize(info.sender.as_str())? {
+        return Err(StdError::generic_err("unauthorized"));
+    }
+
+    UNBOND_OPTIONS.remove(deps.storage, (&staking_token, unbonding_period));
+
+    Ok(Response::new()
+        .add_attribute("action", "remove_instant_withdraw_option")
+        .add_attribute("staking_token", staking_token.to_string())
+        .add_attribute("unbonding_period", unbonding_period.to_string()))
+}
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
@@ -280,6 +351,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::TotalStakedAtHeight { asset_key, height } => {
             to_binary(&query_total_staked_at_height(deps, env, asset_key, height)?)
         }
+        QueryMsg::UnbondFee {
+            staking_token,
+            period,
+        } => to_binary(&UNBOND_OPTIONS.load(deps.storage, (&staking_token, period))?),
+        QueryMsg::UnbondOptions { staking_token } => {
+            to_binary(&query_unbond_options(deps, staking_token)?)
+        }
     }
 }
 
@@ -318,6 +396,7 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     let resp = ConfigResponse {
         owner: deps.api.addr_humanize(&state.owner)?,
         rewarder: deps.api.addr_humanize(&state.rewarder)?,
+        withdraw_fee_receiver: deps.api.addr_humanize(&state.withdraw_fee_receiver)?,
     };
 
     Ok(resp)
@@ -408,8 +487,34 @@ pub fn query_total_staked_at_height(
         .unwrap_or_default();
     Ok(TotalStakedAtHeightResponse { total, height })
 }
+
+pub fn query_unbond_options(
+    deps: Deps,
+    staking_token: Addr,
+) -> StdResult<Vec<UnbondOptionResponse>> {
+    let res: Vec<UnbondOptionResponse> = UNBOND_OPTIONS
+        .prefix(&staking_token)
+        .range(deps.storage, None, None, Order::Ascending)
+        .map(|item| {
+            let (period, fee) = item.unwrap();
+            UnbondOptionResponse { period, fee }
+        })
+        .collect();
+    Ok(res)
+}
+
 // migrate contract
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> StdResult<Response> {
+    store_config(
+        deps.storage,
+        &Config {
+            owner: deps.api.addr_canonicalize(msg.owner.as_str())?,
+            rewarder: deps.api.addr_canonicalize(msg.rewarder.as_str())?,
+            withdraw_fee_receiver: deps
+                .api
+                .addr_canonicalize(msg.withdraw_fee_receiver.as_str())?,
+        },
+    )?;
     Ok(Response::default())
 }
